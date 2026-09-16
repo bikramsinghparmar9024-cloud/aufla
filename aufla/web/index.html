@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AUFLA — Forensic Explorer</title>
+<style>
+  :root {
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c232c; --line:#2a323d;
+    --ink:#e6edf3; --dim:#8b98a5; --faint:#5c6773;
+    --accent:#4d9de0; --ok:#3fb950; --warn:#d29922; --bad:#f85149;
+    --mono:"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font:14px/1.5 "Segoe UI",system-ui,sans-serif;
+  }
+  header {
+    display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
+    padding:14px 20px; border-bottom:1px solid var(--line); background:var(--panel);
+  }
+  header h1 { margin:0; font-size:17px; letter-spacing:.3px; }
+  header .tag { color:var(--faint); font-size:12px; }
+  header .spacer { flex:1; }
+  .readonly {
+    font-size:11px; color:var(--dim); border:1px solid var(--line);
+    padding:3px 9px; border-radius:99px;
+  }
+  main { padding:20px; max-width:1500px; margin:0 auto; }
+
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .tile { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:13px 15px; }
+  .tile .k { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.7px; }
+  .tile .v { font-size:24px; font-weight:600; margin-top:4px; font-variant-numeric:tabular-nums; }
+
+  .bar { display:flex; align-items:center; gap:12px; margin:20px 0 12px; flex-wrap:wrap; }
+  button {
+    background:var(--accent); color:#06121f; border:0; border-radius:6px;
+    padding:8px 15px; font:600 13px/1 inherit; cursor:pointer;
+  }
+  button:hover { filter:brightness(1.1); }
+  button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); font-weight:500; }
+  select {
+    background:var(--panel2); color:var(--ink); border:1px solid var(--line);
+    border-radius:6px; padding:7px 10px; font:inherit;
+  }
+  #verdict { font-weight:600; font-family:var(--mono); font-size:13px; }
+  .pass { color:var(--ok); } .fail { color:var(--bad); }
+
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+  @media (max-width:1100px) { .cols { grid-template-columns:1fr; } }
+
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .panel h2 {
+    margin:0; padding:11px 15px; font-size:12px; text-transform:uppercase;
+    letter-spacing:.8px; color:var(--dim); border-bottom:1px solid var(--line);
+    background:var(--panel2);
+  }
+  .panel .body { max-height:62vh; overflow:auto; }
+
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th {
+    text-align:left; padding:8px 12px; color:var(--dim); font-weight:600;
+    font-size:11px; text-transform:uppercase; letter-spacing:.5px;
+    border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--panel2);
+  }
+  td { padding:7px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
+  tbody tr { cursor:pointer; }
+  tbody tr:hover { background:var(--panel2); }
+  tbody tr.sel { background:#1d2b3a; }
+  .mono { font-family:var(--mono); font-size:12px; }
+
+  .pill { font-size:11px; padding:2px 8px; border-radius:99px; font-weight:600; }
+  .full { background:#0f3520; color:var(--ok); }
+  .partial { background:#3a2f0b; color:var(--warn); }
+  .quarantined { background:#3d1418; color:var(--bad); }
+
+  .kv { display:grid; grid-template-columns:150px 1fr; gap:5px 14px; padding:14px 15px; font-size:13px; }
+  .kv dt { color:var(--dim); }
+  .kv dd { margin:0; font-family:var(--mono); font-size:12px; word-break:break-all; }
+
+  pre {
+    margin:0; padding:13px 15px; background:#0a0d12; color:#bcd;
+    font-family:var(--mono); font-size:12px; white-space:pre-wrap;
+    word-break:break-all; border-top:1px solid var(--line);
+  }
+  .sub {
+    padding:9px 15px; font-size:11px; color:var(--dim);
+    text-transform:uppercase; letter-spacing:.6px; border-top:1px solid var(--line);
+    background:var(--panel2);
+  }
+  .warn-item { color:var(--warn); padding:5px 15px; font-size:12px; }
+  .empty { padding:26px 15px; color:var(--faint); text-align:center; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AUFLA · Forensic Explorer</h1>
+  <span class="tag">Universal Log Pre-processing Framework — SIH 2026 · PS 26156</span>
+  <span class="spacer"></span>
+  <span class="readonly">read-only · air-gapped · no external assets</span>
+</header>
+
+<main>
+  <section class="tiles" id="tiles"></section>
+
+  <div class="bar">
+    <button id="verify">Verify chain</button>
+    <span id="verdict">—</span>
+    <span class="spacer" style="flex:1"></span>
+    <select id="source"><option value="">all sources</option></select>
+    <button class="ghost" id="reload">Reload</button>
+  </div>
+
+  <div class="cols">
+    <div class="panel">
+      <h2>Events</h2>
+      <div class="body">
+        <table>
+          <thead><tr>
+            <th>Received</th><th>Source</th><th>Summary</th><th>Status</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Original bytes &amp; normalised record</h2>
+      <div class="body" id="detail">
+        <div class="empty">Select an event to see the exact bytes that arrived.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const get = async p => (await fetch(p)).json();
+
+let selected = null;
+
+async function loadStats() {
+  const s = await get("/api/stats");
+  $("#tiles").innerHTML = [
+    ["raw events", s.raw_events],
+    ["sealed", s.sealed_events],
+    ["batches", s.batches],
+    ["checkpoints", s.checkpoints],
+    ["mappings", s.mappings],
+  ].map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("")
+    + `<div class="tile"><div class="k">chain head</div>
+       <div class="v mono" style="font-size:13px;word-break:break-all">${esc(s.chain_head.slice(0, 24))}…</div></div>`;
+
+  const sel = $("#source"), keep = sel.value;
+  sel.innerHTML = `<option value="">all sources</option>` +
+    Object.entries(s.by_source).map(([k, n]) => `<option value="${esc(k)}">${esc(k)} (${n})</option>`).join("");
+  sel.value = keep;
+}
+
+async function loadEvents() {
+  const src = $("#source").value;
+  const rows = await get("/api/events?limit=300" + (src ? "&source=" + encodeURIComponent(src) : ""));
+  $("#rows").innerHTML = rows.length ? rows.map(r => `
+    <tr data-uid="${r.event_uid}" class="${r.event_uid === selected ? "sel" : ""}">
+      <td class="mono">${esc(r.received_at.slice(11, 23))}</td>
+      <td>${esc(r.source_id)}</td>
+      <td>${esc(r.summary)}</td>
+      <td><span class="pill ${r.parse_status}">${r.parse_status}</span></td>
+    </tr>`).join("")
+    : `<tr><td colspan="4" class="empty">No events. Ingest a file first.</td></tr>`;
+
+  document.querySelectorAll("#rows tr[data-uid]").forEach(tr =>
+    tr.onclick = () => showEvent(tr.dataset.uid));
+}
+
+async function showEvent(uid) {
+  selected = uid;
+  document.querySelectorAll("#rows tr").forEach(tr =>
+    tr.classList.toggle("sel", tr.dataset.uid === uid));
+
+  const d = await get("/api/event/" + uid);
+  if (d.error) { $("#detail").innerHTML = `<div class="empty">${esc(d.error)}</div>`; return; }
+
+  const fields = Object.entries(d.normalized)
+    .filter(([k]) => !["event_uid", "raw_hash", "source_id", "mapping_hash"].includes(k))
+    .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(typeof v === "object" ? JSON.stringify(v) : v)}</dd>`)
+    .join("");
+
+  const hexRows = (d.raw.hex.match(/.{1,32}/g) || []).slice(0, 12)
+    .map(h => h.match(/.{1,2}/g).join(" ")).join("\n");
+
+  $("#detail").innerHTML = `
+    <div class="sub">Original bytes — exactly as received${d.raw.hash_verified ? ", hash verified" : ", HASH MISMATCH"}</div>
+    <pre>${esc(d.raw.text)}</pre>
+    <div class="sub">Hex (first 384 bytes)</div>
+    <pre>${esc(hexRows)}</pre>
+    <div class="sub">Lineage</div>
+    <dl class="kv">
+      <dt>event_uid</dt><dd>${esc(d.raw.event_uid)}</dd>
+      <dt>raw_hash</dt><dd>${esc(d.raw.raw_hash)}</dd>
+      <dt>received_at</dt><dd>${esc(d.raw.received_at)}</dd>
+      <dt>transport</dt><dd>${esc(d.raw.transport)}${d.raw.truncated ? " (truncated)" : ""}</dd>
+      ${d.ledger ? `
+      <dt>batch</dt><dd>#${d.ledger.batch_id}, leaf ${d.ledger.leaf_index}${d.ledger.signed ? ", signed" : ""}</dd>
+      <dt>merkle root</dt><dd>${esc(d.ledger.root)}</dd>` : `<dt>batch</dt><dd>not yet sealed</dd>`}
+    </dl>
+    <div class="sub">Normalised OCSF projection (derived — rebuildable from the bytes above)</div>
+    <dl class="kv">${fields}</dl>
+    ${d.warnings.length ? `<div class="sub">Warnings</div>` +
+      d.warnings.map(w => `<div class="warn-item">• ${esc(w)}</div>`).join("") : ""}`;
+}
+
+$("#verify").onclick = async () => {
+  $("#verdict").textContent = "checking…";
+  $("#verdict").className = "";
+  const r = await get("/api/verify");
+  $("#verdict").textContent = r.text;
+  $("#verdict").className = r.ok ? "pass" : "fail";
+};
+
+$("#source").onchange = loadEvents;
+$("#reload").onclick = async () => { await loadStats(); await loadEvents(); };
+
+(async () => { await loadStats(); await loadEvents(); })();
+</script>
+</body>
+</html>

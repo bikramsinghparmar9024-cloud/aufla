@@ -178,6 +178,18 @@ def cmd_checkpoint(args) -> int:
     return 0
 
 
+def cmd_serve(args) -> int:
+    from .web import serve
+
+    store, ledger, registry = _open(args.data, args.sources)
+    try:
+        serve(store, ledger, registry, host=args.host, port=args.port)
+    finally:
+        store.close()
+        ledger.close()
+    return 0
+
+
 def cmd_stats(args) -> int:
     store, ledger, registry = _open(args.data, args.sources)
     print(f"raw events   : {store.count()}")
@@ -247,6 +259,11 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("checkpoint", help="sign a daily offline checkpoint")
     p.add_argument("--day", required=True)
     p.set_defaults(func=cmd_checkpoint)
+
+    p = sub.add_parser("serve", help="run the read-only Forensic Explorer UI")
+    p.add_argument("--host", default="127.0.0.1")
+    p.add_argument("--port", type=int, default=8000)
+    p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser("stats", help="show store and ledger counters")
     p.set_defaults(func=cmd_stats)
