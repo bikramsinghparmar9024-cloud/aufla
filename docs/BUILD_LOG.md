@@ -82,10 +82,111 @@ Regression test added.
 
 **Verified:** 93 tests passing.
 
-## Step 3 — YAML mappings, loader, format router ⏳
+## Step 3 — YAML mappings, loader, format router ✅
 
-## Step 4 — Normaliser and the OCSF projection ⏳
+The artifact the discovery lane produces: a file a person can read, diff and
+sign off on. The model never writes to the event store.
 
-## Step 5 — Merkle ledger, signing, `ulpf verify` ⏳
+| Module | What it does |
+| --- | --- |
+| `aufla/mapping/schema.py` | Field references, specs, conditions, rules, mappings, content hashing |
+| `aufla/mapping/router.py` | Format detection and discovery-strategy routing |
+| `aufla/mapping/loader.py` | Directory registry with hot reload |
+| `sources/*.yaml` | pfSense filterlog, Suricata EVE, Squid access |
 
-## Step 6 — Output adapters and Parquet export ⏳
+**Routing — only free text reaches the model**
+
+| Detected | Strategy | Model? |
+| --- | --- | --- |
+| CEF, LEEF, key-value | spec parse | no |
+| JSON, XML | schema walk | no |
+| CSV | positional | no |
+| free-text syslog | template mining | **yes** |
+
+Syslog framing is stripped before detection, so CEF wrapped in syslog is still
+recognised as CEF rather than being sent to the model for nothing.
+
+**Rejected at load:** unknown OCSF targets and classes, duplicate rule names,
+and a catch-all rule placed where it would shadow later rules. A broken edit
+leaves the previous version serving rather than dropping the source.
+
+**Bug found:** the catalogue omitted `duration`, `traffic.bytes` and
+`disposition_id` from HTTP Activity (4002). Caught by the target validator
+refusing the bundled Squid mapping.
+
+**Verified:** 163 tests.
+
+## Step 4 — Normaliser and the OCSF projection ✅
+
+| Module | What it does |
+| --- | --- |
+| `aufla/normalize/parsers.py` | CSV, SSV, TSV, JSON, XML, key-value, CEF, LEEF |
+| `aufla/normalize/transforms.py` | Closed registries of transforms and lookups |
+| `aufla/normalize/engine.py` | Rule selection, field resolution, validation, lineage |
+
+Transforms and lookups are closed sets, so a mapping can no more invent a
+transform than it can invent an OCSF field. `syslog_time` infers the year RFC
+3164 omits and handles the new-year rollover, which otherwise dates every
+January event twelve months ahead.
+
+Normalisation never raises. An unmapped source, an unparseable body or an
+unmatched rule quarantines with a reason. A device supplying no parseable time
+falls back to the receipt clock, with a warning rather than silently.
+
+**Bug found:** `_flatten` let a synthesised path overwrite a literal dotted
+key, so `{"src.ip": x, "src": {"ip": y}}` resolved by dict iteration order.
+Literal keys now always win, verified in both orders.
+
+**Verified:** 220 tests.
+
+## Step 5 — Merkle ledger, two-tier signing, `ulpf verify` ✅
+
+| Module | What it does |
+| --- | --- |
+| `aufla/ledger/merkle.py` | Merkle trees with domain separation and inclusion proofs |
+| `aufla/ledger/signing.py` | Ed25519 via `cryptography`, batch and checkpoint tiers |
+| `aufla/ledger/ledger.py` | Chained batches, checkpoints, verification |
+| `aufla/forensics/certificate.py` | Section 63 BSA 2023 certificate preparation |
+| `aufla/pipeline.py` | capture → seal → normalise, in that order |
+| `aufla/cli.py` | `ulpf` command line |
+
+**Two classic Merkle mistakes avoided.** Leaves are hashed `0x00 ‖ data` and
+nodes `0x01 ‖ l ‖ r`, so an internal node cannot be presented as a leaf. Odd
+levels **promote** the last node rather than duplicating it — duplication is
+CVE-2012-2459, where two distinct trees share a root.
+
+**Signing is two-tier** because one offline key cannot sign a root every
+second. An online key signs each batch; an offline root key signs a daily
+checkpoint. Stealing the online key buys forgery only within the current day.
+
+**What the chain seals:** the raw stream. The OCSF projection is re-buildable
+and therefore not evidence. Mapping hashes are committed into each batch, so
+the derivation stays provable.
+
+**Detected by `verify`:** deleted events, modified bodies, modified bodies
+*with* a matching forged hash column, edited ledger rows, broken chain links,
+removed leaf rows, forged signatures, tampered checkpoints.
+
+**Bug found:** the leaf function used when verifying without the raw store
+computed `sha256(0x00 ‖ hash)` while sealing used `sha256(0x00 ‖ bytes)` — so
+store-free verification could never reproduce a root. Leaves now bind
+`uid ‖ content hash` consistently, which also stops two byte-identical events
+being swapped without changing the root.
+
+## Step 6 — Output adapters and export ✅
+
+| Module | What it does |
+| --- | --- |
+| `aufla/output/adapters.py` | OCSF JSON, NDJSON, CEF, LEEF |
+| `aufla/output/export.py` | Partitioned NDJSON for data-lake staging |
+
+This is what makes AUFLA a *pre-processor* rather than another SIEM. Every
+adapter carries `event_uid` and `raw_hash` downstream, so an analyst in Splunk
+or QRadar can walk back to the exact original bytes.
+
+Export partitions as `date=YYYY-MM-DD/class=NNNN`, matching what a Parquet
+writer would produce — switching formats later is a writer change, not a
+layout migration. NDJSON is the default because pyarrow is a large dependency
+and unavailable on a genuinely air-gapped host without a wheel mirror.
+
+**Verified:** 295 tests, plus the CLI exercised end to end outside pytest.
