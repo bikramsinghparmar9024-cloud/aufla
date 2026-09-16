@@ -1,0 +1,50 @@
+# Suricata EVE JSON output.
+#
+# Self-describing JSON, so this mapping is written by schema walk with no
+# model inference required. Two event types are covered: "alert" becomes a
+# Detection Finding, "flow" becomes Network Activity.
+source: suricata_eve
+format: json
+ocsf_version: "1.5.0"
+version: 1
+description: Suricata IDS/IPS events from eve.json.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: alert
+    match: { field: $event_type, equals: "alert" }
+    ocsf_class: 2004
+    fields:
+      time: { from: $timestamp, transform: iso8601 }
+      src_endpoint.ip: $src_ip
+      dst_endpoint.ip: $dest_ip
+      src_endpoint.port: $src_port
+      dst_endpoint.port: $dest_port
+      finding_info.title: $alert.signature
+      finding_info.uid: $alert.signature_id
+      finding_info.desc: $alert.category
+      severity_id: { from: $alert.severity, lookup: suricata_severity }
+      activity_id: 1             # Create
+      metadata.product.name: Suricata
+      metadata.product.vendor_name: OISF
+      metadata.log_name: eve.json
+
+  - name: flow
+    match: { field: $event_type, equals: "flow" }
+    ocsf_class: 4001
+    fields:
+      time: { from: $timestamp, transform: iso8601 }
+      src_endpoint.ip: $src_ip
+      dst_endpoint.ip: $dest_ip
+      src_endpoint.port: $src_port
+      dst_endpoint.port: $dest_port
+      traffic.bytes_in: $flow.bytes_toserver
+      traffic.bytes_out: $flow.bytes_toclient
+      traffic.packets: $flow.pkts_toserver
+      activity_id: 6
+      severity_id: 1
+      metadata.product.name: Suricata
+      metadata.product.vendor_name: OISF
+      metadata.log_name: eve.json

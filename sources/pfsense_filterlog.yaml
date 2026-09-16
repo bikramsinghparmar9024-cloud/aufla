@@ -1,0 +1,51 @@
+# pfSense / OPNsense packet filter log.
+#
+# Format: comma-separated, emitted over syslog with tag "filterlog".
+# Column layout for IPv4 TCP:
+#   1 rule  2 sub  3 anchor  4 tracker  5 interface  6 reason  7 action
+#   8 direction  9 ip-version  10 tos  11 ecn  12 ttl  13 id  14 offset
+#   15 flags  16 proto-id  17 proto  18 length  19 src  20 dst
+#   21 srcport  22 dstport  23 datalen
+source: pfsense_filterlog
+format: csv
+ocsf_version: "1.5.0"
+version: 1
+description: pfSense packet filter decisions, mapped to Network Activity.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: block
+    match: { field: $7, equals: "block" }
+    ocsf_class: 4001
+    fields:
+      src_endpoint.ip: $19
+      dst_endpoint.ip: $20
+      src_endpoint.port: $21
+      dst_endpoint.port: $22
+      connection_info.protocol_num: $16
+      traffic.bytes: $23
+      disposition_id: 2          # Blocked
+      activity_id: 6             # Traffic
+      severity_id: 3             # Medium: a block is worth noticing
+      metadata.product.name: pfSense
+      metadata.product.vendor_name: Netgate
+      metadata.log_name: filterlog
+
+  - name: pass
+    match: { field: $7, equals: "pass" }
+    ocsf_class: 4001
+    fields:
+      src_endpoint.ip: $19
+      dst_endpoint.ip: $20
+      src_endpoint.port: $21
+      dst_endpoint.port: $22
+      connection_info.protocol_num: $16
+      traffic.bytes: $23
+      disposition_id: 1          # Allowed
+      activity_id: 6
+      severity_id: 1             # Informational
+      metadata.product.name: pfSense
+      metadata.product.vendor_name: Netgate
+      metadata.log_name: filterlog

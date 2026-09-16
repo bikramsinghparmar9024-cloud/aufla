@@ -1,0 +1,30 @@
+# Squid proxy access log, native format.
+#
+# Whitespace-separated, so it is onboarded positionally:
+#   1 timestamp  2 elapsed  3 client  4 code/status  5 bytes
+#   6 method  7 url  8 ident  9 hierarchy/peer  10 content-type
+source: squid_access
+format: ssv
+ocsf_version: "1.5.0"
+version: 1
+description: Squid forward-proxy requests, mapped to HTTP Activity.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: request
+    ocsf_class: 4002
+    fields:
+      time: { from: $1, transform: epoch_seconds }
+      src_endpoint.ip: $3
+      http_response.code: { from: $4, transform: after_slash }
+      http_response.length: $5
+      http_request.http_method: $6
+      http_request.url.text: $7
+      duration: $2
+      activity_id: { from: $6, lookup: http_method_activity, default: 0 }
+      severity_id: 1
+      metadata.product.name: Squid
+      metadata.product.vendor_name: Squid Software Foundation
+      metadata.log_name: access.log

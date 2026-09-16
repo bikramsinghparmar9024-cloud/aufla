@@ -159,6 +159,11 @@ HTTP_ACTIVITY = _build(
         _f("http_request.referrer", FieldType.STRING, False, "Referrer"),
         _f("http_response.code", FieldType.INTEGER, False, "Status code"),
         _f("http_response.length", FieldType.LONG, False, "Response bytes"),
+        # HTTP Activity sits in the Network Activity category and carries the
+        # same traffic and timing attributes as 4001.
+        _f("duration", FieldType.LONG, False, "Duration in milliseconds"),
+        _f("traffic.bytes", FieldType.LONG, False, "Total bytes"),
+        _f("disposition_id", FieldType.INTEGER, False, "Allowed, blocked, etc."),
     ),
 )
 
