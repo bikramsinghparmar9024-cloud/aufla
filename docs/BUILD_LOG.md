@@ -33,10 +33,54 @@ permanent record, and identity is assigned once at the ingest boundary.
 
 **Verified:** 33 tests passing.
 
-## Step 2 — OCSF catalogue and validation ⏳
+## Step 2 — OCSF catalogue and validation ✅
 
-Next: the field catalogue, type and range validation, and the semantic checks
-that catch a mapping putting a source IP into `dst_endpoint.ip`.
+The layer that closes the gap grammar-constrained decoding leaves open. GBNF
+guarantees a model emits a real field *name*; only this can tell whether the
+*value* behind it makes sense.
+
+**Implemented**
+
+| Module | What it does |
+| --- | --- |
+| `aufla/ocsf/types.py` | 13 field types with coercion: IP, PORT, MAC, TIMESTAMP, HOSTNAME, EMAIL, URL, UUID, scalars |
+| `aufla/ocsf/classes.py` | Catalogue pinned to **OCSF 1.5.0** — 4001 Network Activity, 4002 HTTP Activity, 3002 Authentication, 2004 Detection Finding |
+| `aufla/ocsf/validate.py` | Three-layer validation plus `mapping_coverage` |
+
+**Three validation layers**
+
+1. *Structural* — is this a field of the class at all?
+2. *Type and range* — `dst_endpoint.port = 70000` is rejected; epoch 0 and
+   far-future timestamps are rejected as clock faults; seconds mistaken for
+   milliseconds is caught.
+3. *Semantic* — the checks that catch a wrong-but-valid mapping:
+   - identical src and dst address → the mapping may read one column twice
+   - well-known source port with ephemeral destination port → endpoints swapped
+   - both endpoints globally routable → the internal side was probably dropped
+   - `bytes_in + bytes_out > bytes` → inconsistent counters
+   - device clock more than an hour from the receipt clock → `event_time` untrusted
+
+**Design decisions worth keeping**
+
+- Warnings never reject a record. Real traffic is strange, and dropping odd
+  events during an incident is worse than useless. Warnings downgrade trust in
+  the *mapping*, which is the thing that might actually be wrong — this is what
+  will feed the confidence gate in Step 4.
+- Vendor extras route to `unmapped` instead of failing the event, and
+  `mapping_coverage` reports the share that found an OCSF home, so the
+  normalised view is never *quietly* lossy.
+- `strict_unknown=True` is used when checking a *mapping*, where an unknown
+  target is a configuration bug rather than a vendor extra.
+
+**Bug found and fixed during this step.** The "is this internal traffic?"
+heuristic first used `ipaddress.is_private`, which returns `True` for the
+TEST-NET documentation ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24)
+and other IANA special-purpose blocks. That conflates "internal network" with
+"reserved" and would have made the check silently wrong on real traffic.
+Switched to `is_global`, which asks the question the heuristic actually means.
+Regression test added.
+
+**Verified:** 93 tests passing.
 
 ## Step 3 — YAML mappings, loader, format router ⏳
 
