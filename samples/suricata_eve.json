@@ -1,0 +1,2 @@
+{"timestamp":"2026-09-17T10:00:00.000000+0000","event_type":"alert","src_ip":"198.18.0.9","dest_ip":"10.0.0.5","src_port":45332,"dest_port":22,"alert":{"signature":"ET SCAN Potential SSH Scan","signature_id":2001219,"category":"Attempted Recon","severity":2}}
+{"timestamp":"2026-09-17T10:00:05.000000+0000","event_type":"flow","src_ip":"10.0.0.5","dest_ip":"203.0.113.9","src_port":51514,"dest_port":443,"flow":{"bytes_toserver":1200,"bytes_toclient":8400,"pkts_toserver":9}}
