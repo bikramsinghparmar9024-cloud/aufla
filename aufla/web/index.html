@@ -224,7 +224,7 @@
     <div class="card" style="margin-top:14px">
       <h2>Findings requiring attention <span class="note">severity Medium and above</span></h2>
       <table class="clickable" id="findings-tbl">
-        <thead><tr><th>Time</th><th>Source</th><th>Finding</th><th>Severity</th></tr></thead>
+        <thead><tr><th>Time <span id="tzlabel2" style="text-transform:none;letter-spacing:0"></span></th><th>Source</th><th>Finding</th><th>Severity</th></tr></thead>
         <tbody id="findings"></tbody>
       </table>
     </div>
@@ -255,7 +255,7 @@
         <h2>Events</h2>
         <div class="scroll">
           <table class="clickable">
-            <thead><tr><th>Received</th><th>Source</th><th>Summary</th><th>Class</th><th>Outcome</th></tr></thead>
+            <thead><tr><th>Received <span id="tzlabel" style="text-transform:none;letter-spacing:0"></span></th><th>Source</th><th>Summary</th><th>Class</th><th>Outcome</th></tr></thead>
             <tbody id="ev-rows"></tbody>
           </table>
         </div>
@@ -325,6 +325,29 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const get = async p => (await fetch(p)).json();
 const post = async p => (await fetch(p, {method:"POST"})).json();
+
+/* ---------------- time ----------------
+   Events are stored and sealed in UTC, and the Section 63 certificate cites
+   UTC, because that is the clock the system can attest to. An analyst reads
+   the console in their own timezone, so every displayed time is converted
+   here. The stored value is never rewritten - the detail pane shows both, so
+   what is on screen can always be reconciled with what is in evidence. */
+
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "local";
+
+// received_at carries nanosecond precision; Date.parse wants at most three
+// fractional digits, so trim rather than rely on engine tolerance.
+const parseTs = iso => new Date(String(iso).replace(/\.(\d{3})\d*(Z|[+-]\d{2}:?\d{2})?$/, ".$1Z"));
+
+const fmtTime = iso => {
+  const d = parseTs(iso);
+  return isNaN(d) ? String(iso).slice(11, 19)
+    : d.toLocaleTimeString([], {hour12:false, hour:"2-digit", minute:"2-digit", second:"2-digit"});
+};
+const fmtDateTime = iso => {
+  const d = parseTs(iso);
+  return isNaN(d) ? String(iso) : d.toLocaleString([], {hour12:false});
+};
 const SERIES = ["--s1","--s2","--s3","--s4","--s5","--s6","--s7","--s8"];
 // Past the last validated slot, fold into a neutral "Other" band rather than
 // inventing a hue - a generated colour has no CVD guarantee.
@@ -446,7 +469,7 @@ async function loadOverview() {
 
   $("#findings").innerHTML = o.findings.length ? o.findings.map(f => `
     <tr data-uid="${f.event_uid}">
-      <td class="mono">${esc(f.time.slice(11,19))}</td>
+      <td class="mono">${esc(fmtTime(f.time))}</td>
       <td>${esc(f.source)}</td>
       <td>${esc(f.title)}</td>
       <td><span class="sev" style="background:${cssv(SEV_COLOR[f.severity_name]||"--muted")}22;color:${cssv(SEV_COLOR[f.severity_name]||"--muted")}">${esc(f.severity_name)}</span></td>
@@ -485,7 +508,7 @@ async function loadEvents() {
   body.innerHTML = evCache.length ? evCache.map(r => {
     const isNew = arrivals.has(r.event_uid);
     return `<tr data-uid="${r.event_uid}" class="${r.event_uid===selected?"sel ":""}${isNew?"fresh":""}">
-      <td class="mono">${esc(r.received_at.slice(11,19))}${isNew?`<span class="newbadge">NEW</span>`:""}</td>
+      <td class="mono">${esc(fmtTime(r.received_at))}${isNew?`<span class="newbadge">NEW</span>`:""}</td>
       <td>${esc(r.source_id)}</td>
       <td>${esc(r.summary)}</td>
       <td style="color:var(--ink-2);font-size:12px">${esc(r.class_name||"—")}</td>
@@ -529,7 +552,8 @@ async function showEvent(uid) {
     <dl class="kv">
       <dt>event_uid</dt><dd>${esc(d.raw.event_uid)}</dd>
       <dt>raw_hash</dt><dd>${esc(d.raw.raw_hash)}</dd>
-      <dt>received</dt><dd>${esc(d.raw.received_at)}</dd>
+      <dt>received</dt><dd>${esc(fmtDateTime(d.raw.received_at))} <span style="color:var(--muted)">(${esc(TZ)})</span></dd>
+      <dt>received (UTC)</dt><dd>${esc(d.raw.received_at)}</dd>
       ${d.ledger?`<dt>sealed in</dt><dd>batch #${d.ledger.batch_id}, leaf ${d.ledger.leaf_index}${d.ledger.signed?", signed":""}</dd>
       <dt>merkle root</dt><dd>${esc(d.ledger.root)}</dd>`:`<dt>sealed in</dt><dd>not yet sealed</dd>`}
     </dl>
@@ -564,7 +588,7 @@ async function loadIntegrity() {
         <div style="font-size:12.5px">Batch #${b.batch_id} · <span class="num">${b.leaf_count}</span> events · ${b.signed?"signed":"unsigned"}</div>
         <div class="mono" style="color:var(--muted);font-size:11px">${esc(b.root.slice(0,48))}…</div>
       </div>
-      <div class="mono" style="color:var(--muted);font-size:11px">${esc(b.sealed_at.slice(11,19))}</div>
+      <div class="mono" style="color:var(--muted);font-size:11px">${esc(fmtTime(b.sealed_at))}</div>
     </div>`).join("") + `</div>`;
 
   $("#checkpoints").innerHTML = d.checkpoints.length ? d.checkpoints.map(c => `
@@ -664,6 +688,8 @@ async function tick(fast) {
 setInterval(() => tick(true), 2000);
 setInterval(() => tick(false), 6000);
 $("#follow").onchange = () => { if (updateFollowUi()) loadEvents(); };
+
+["tzlabel","tzlabel2"].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = `(${TZ})`; });
 
 (async () => {
   lastStatus = await get("/api/live/status");
