@@ -181,12 +181,19 @@ def cmd_checkpoint(args) -> int:
 def cmd_serve(args) -> int:
     from .web import serve
 
+    # Open once so the databases and keys exist, then hand the server paths:
+    # it opens per-request connections on its own threads.
     store, ledger, registry = _open(args.data, args.sources)
-    try:
-        serve(store, ledger, registry, host=args.host, port=args.port)
-    finally:
-        store.close()
-        ledger.close()
+    store.close()
+    ledger.close()
+
+    serve(
+        args.data / "raw.db",
+        args.data / "ledger.db",
+        registry,
+        host=args.host,
+        port=args.port,
+    )
     return 0
 
 

@@ -10,13 +10,22 @@ classified network without an exception request.
 the ledger, or a mapping. An investigator can look at evidence and verify it;
 nothing reachable from a browser can alter it.
 
-Requests are handled **serially**, not on a thread pool. Python reports
-``sqlite3.threadsafety == 1`` on this build, meaning a connection may not be
-shared between threads -- so a threading server would either corrupt state or
-need every access serialised behind a lock anyway. For a local forensic UI
-with a handful of analysts, serial handling is the simpler correct answer; the
-expensive call is ``/api/verify``, and an investigator running two of those at
-once is not a case worth adding locking complexity for.
+Threading and database handles
+------------------------------
+Requests are handled on threads, and **each request opens its own SQLite
+connections**, because Python reports ``sqlite3.threadsafety == 1`` here: a
+connection may not be shared between threads.
+
+Serial handling was tried first and is wrong for a browser client. Browsers
+preconnect -- they open speculative sockets and send nothing on them. A
+single-threaded server accepts one of those and blocks reading it forever,
+so the UI hangs even though every request it did send was answered. ``curl``
+never behaves that way, which is exactly why a curl-based smoke test passes
+while the real page hangs.
+
+Opening SQLite per request costs well under a millisecond and removes the
+shared-handle problem entirely, which is a better trade than a lock around
+every read.
 """
 
 from __future__ import annotations
@@ -24,16 +33,17 @@ from __future__ import annotations
 import json
 import mimetypes
 import uuid
+from contextlib import contextmanager
 from functools import partial
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 from urllib.parse import parse_qs, urlparse
 
 from ..ledger import Ledger
 from ..mapping import MappingRegistry
 from ..normalize import Normalizer
-from ..storage import RawStore
+from ..storage import SQLiteRawStore
 
 __all__ = ["build_server", "serve", "ForensicHandler"]
 
@@ -44,20 +54,34 @@ class ForensicHandler(BaseHTTPRequestHandler):
     """Read-only HTTP surface over the pipeline."""
 
     server_version = "AUFLA-Forensic-Explorer"
+    # Do not let a preconnected-but-silent browser socket hold a thread open
+    # indefinitely.
+    timeout = 20
 
     def __init__(
         self,
         *args,
-        store: RawStore,
-        ledger: Ledger,
+        raw_path: Path,
+        ledger_path: Path,
         registry: MappingRegistry,
         **kwargs,
     ) -> None:
-        self.store = store
-        self.ledger = ledger
+        self.raw_path = raw_path
+        self.ledger_path = ledger_path
         self.registry = registry
         self.normalizer = Normalizer(registry)
         super().__init__(*args, **kwargs)
+
+    @contextmanager
+    def _db(self) -> Iterator[tuple[SQLiteRawStore, Ledger]]:
+        """Open connections owned by this request's thread, and close them."""
+        store = SQLiteRawStore(self.raw_path)
+        ledger = Ledger(self.ledger_path)
+        try:
+            yield store, ledger
+        finally:
+            store.close()
+            ledger.close()
 
     # ---- plumbing ---------------------------------------------------------
 
@@ -70,14 +94,9 @@ class ForensicHandler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
-        # One request per connection, always.
-        #
-        # This server is serial (see the module docstring), and a browser will
-        # happily hold a keep-alive connection open after it is done with it.
-        # A single-threaded server then blocks reading that idle socket instead
-        # of accepting anything else, and the whole UI hangs on the second
-        # page load. Closing each connection costs a negligible handshake on
-        # localhost and removes the head-of-line blocking entirely.
+        # One request per connection. Threads make this unnecessary for
+        # correctness, but it keeps idle browser sockets from holding threads
+        # and database handles open for no reason.
         self.send_header("Connection", "close")
         # The page loads nothing external; say so explicitly so a browser
         # cannot be talked into fetching anything either.
@@ -110,18 +129,24 @@ class ForensicHandler(BaseHTTPRequestHandler):
         try:
             if route == "/":
                 self._serve_page()
-            elif route == "/api/stats":
-                self._json(self._stats())
-            elif route == "/api/sources":
+                return
+            if route == "/api/sources":
                 self._json(self._sources())
-            elif route == "/api/events":
-                self._json(self._events(query))
-            elif route.startswith("/api/event/"):
-                self._json(self._event(route.rsplit("/", 1)[-1]))
-            elif route == "/api/verify":
-                self._json(self._verify())
-            else:
-                self._json({"error": f"no route {route}"}, status=404)
+                return
+
+            with self._db() as (store, ledger):
+                if route == "/api/stats":
+                    self._json(self._stats(store, ledger))
+                elif route == "/api/events":
+                    self._json(self._events(store, query))
+                elif route.startswith("/api/event/"):
+                    self._json(
+                        self._event(store, ledger, route.rsplit("/", 1)[-1])
+                    )
+                elif route == "/api/verify":
+                    self._json(self._verify(store, ledger))
+                else:
+                    self._json({"error": f"no route {route}"}, status=404)
         except Exception as exc:  # pragma: no cover - defensive
             self._json({"error": f"{type(exc).__name__}: {exc}"}, status=500)
 
@@ -132,16 +157,16 @@ class ForensicHandler(BaseHTTPRequestHandler):
 
     # ---- data -------------------------------------------------------------
 
-    def _stats(self) -> dict[str, Any]:
+    def _stats(self, store, ledger) -> dict[str, Any]:
         sources: dict[str, int] = {}
-        for event in self.store.iter_events():
+        for event in store.iter_events():
             sources[event.source_id] = sources.get(event.source_id, 0) + 1
         return {
-            "raw_events": self.store.count(),
-            "sealed_events": self.ledger.event_count,
-            "batches": self.ledger.batch_count,
-            "checkpoints": len(self.ledger.checkpoints()),
-            "chain_head": self.ledger.head,
+            "raw_events": store.count(),
+            "sealed_events": ledger.event_count,
+            "batches": ledger.batch_count,
+            "checkpoints": len(ledger.checkpoints()),
+            "chain_head": ledger.head,
             "mappings": len(self.registry),
             "by_source": sources,
         }
@@ -162,12 +187,12 @@ class ForensicHandler(BaseHTTPRequestHandler):
             for m in self.registry
         ]
 
-    def _events(self, query: dict[str, list[str]]) -> list[dict[str, Any]]:
+    def _events(self, store, query: dict[str, list[str]]) -> list[dict[str, Any]]:
         limit = int(query.get("limit", ["200"])[0])
         source = query.get("source", [None])[0]
 
         out: list[dict[str, Any]] = []
-        for event in self.store.iter_events(source_id=source, limit=limit):
+        for event in store.iter_events(source_id=source, limit=limit):
             record = self.normalizer.normalize(event)
             out.append(
                 {
@@ -187,19 +212,19 @@ class ForensicHandler(BaseHTTPRequestHandler):
             )
         return out
 
-    def _event(self, uid: str) -> dict[str, Any]:
+    def _event(self, store, ledger, uid: str) -> dict[str, Any]:
         try:
             event_uid = uuid.UUID(uid)
         except ValueError:
             return {"error": f"not a uuid: {uid}"}
 
-        event = self.store.get(event_uid)
+        event = store.get(event_uid)
         if event is None:
             return {"error": f"no event {uid}"}
 
         record = self.normalizer.normalize(event)
-        located = self.ledger.locate(uid)
-        batch = self.ledger.get_batch(located[0]) if located else None
+        located = ledger.locate(uid)
+        batch = ledger.get_batch(located[0]) if located else None
 
         return {
             "raw": {
@@ -232,8 +257,8 @@ class ForensicHandler(BaseHTTPRequestHandler):
             },
         }
 
-    def _verify(self) -> dict[str, Any]:
-        result = self.ledger.verify(store=self.store)
+    def _verify(self, store, ledger) -> dict[str, Any]:
+        result = ledger.verify(store=store)
         return {
             "ok": result.ok,
             "text": str(result),
@@ -261,28 +286,35 @@ def _summarise(record) -> str:
 
 
 def build_server(
-    store: RawStore,
-    ledger: Ledger,
+    raw_path: str | Path,
+    ledger_path: str | Path,
     registry: MappingRegistry,
     *,
     host: str = "127.0.0.1",
     port: int = 8000,
-) -> HTTPServer:
+) -> ThreadingHTTPServer:
+    """Build the server. Paths, not open handles: each request opens its own."""
     handler = partial(
-        ForensicHandler, store=store, ledger=ledger, registry=registry
+        ForensicHandler,
+        raw_path=Path(raw_path),
+        ledger_path=Path(ledger_path),
+        registry=registry,
     )
-    return HTTPServer((host, port), handler)
+    server = ThreadingHTTPServer((host, port), handler)
+    # An abandoned browser socket should not keep the process alive.
+    server.daemon_threads = True
+    return server
 
 
 def serve(
-    store: RawStore,
-    ledger: Ledger,
+    raw_path: str | Path,
+    ledger_path: str | Path,
     registry: MappingRegistry,
     *,
     host: str = "127.0.0.1",
     port: int = 8000,
 ) -> None:  # pragma: no cover - blocking
-    httpd = build_server(store, ledger, registry, host=host, port=port)
+    httpd = build_server(raw_path, ledger_path, registry, host=host, port=port)
     print(f"Forensic Explorer on http://{host}:{port}  (read-only, Ctrl+C to stop)")
     try:
         httpd.serve_forever()
