@@ -91,9 +91,9 @@ def test_backfill_rebuilds_projections_from_raw(parts):
     pipeline, _, _ = parts
     pipeline.ingest(PFSENSE_LINES, "pfsense_filterlog")
 
-    records = pipeline.backfill("pfsense_filterlog")
-    assert len(records) == 6
-    assert all(r.parse_status.value == "full" for r in records)
+    counts = pipeline.backfill("pfsense_filterlog")
+    assert counts["processed"] == 6
+    assert counts["normalized"] == 6
 
 
 def test_mapping_hashes_are_sealed_with_the_events(parts):

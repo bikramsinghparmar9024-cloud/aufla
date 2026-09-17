@@ -26,7 +26,7 @@ from aufla.ledger.signing import load_or_create_keypair  # noqa: E402
 from aufla.mapping import MappingRegistry            # noqa: E402
 from aufla.models import RawEvent, Transport         # noqa: E402
 from aufla.normalize import Normalizer               # noqa: E402
-from aufla.storage import SQLiteRawStore             # noqa: E402
+from aufla.storage import OCSFStore, SQLiteRawStore  # noqa: E402
 
 INTERNAL = [f"10.0.{s}.{h}" for s in (0, 1, 2) for h in range(5, 60)]
 EXTERNAL = [
@@ -112,11 +112,38 @@ def unknown(ts_ms: int, rng: random.Random) -> bytes:
     ).replace("%b", tag).encode()
 
 
+# A second unmapped vendor, and a deliberately awkward one: it prints the
+# DESTINATION before the source. Structure inference has no way to know that
+# -- the convention "the first endpoint is the source" holds for every other
+# format -- so the proposal comes out with the endpoints reversed.
+#
+# That is the point. The semantic check sees a source on port 443 talking to a
+# destination on an ephemeral port, recognises the inversion, and sends the
+# proposal to a human instead of activating it. A wrong-but-valid mapping is
+# exactly what grammar constraints cannot catch.
+ORBIT = (
+    "<188>%b orbit-proxy[{pid}]: session={sid} verdict={act} "
+    "to {dst}/{dp} from {src}/{sp} scheme=https bytes={by}"
+)
+
+
+def orbit(ts_ms: int, rng: random.Random) -> bytes:
+    tag = time.strftime("%b %d %H:%M:%S", time.gmtime(ts_ms / 1000))
+    return ORBIT.format(
+        pid=rng.randint(100, 9999), sid=rng.randint(10000, 99999),
+        act=rng.choice(["allow", "deny"]),
+        dst=rng.choice(EXTERNAL), dp=rng.choice([443, 443, 80]),
+        src=rng.choice(INTERNAL), sp=rng.randint(49152, 65535),
+        by=rng.randint(200, 80000),
+    ).replace("%b", tag).encode()
+
+
 GENERATORS = [
-    ("pfsense_filterlog", pfsense, 0.46),
-    ("suricata_eve", suricata, 0.22),
-    ("squid_access", squid, 0.27),
-    ("acme_fw", unknown, 0.05),          # deliberately unmapped
+    ("pfsense_filterlog", pfsense, 0.44),
+    ("suricata_eve", suricata, 0.21),
+    ("squid_access", squid, 0.26),
+    ("acme_fw", unknown, 0.05),          # unmapped; discovery should solve it
+    ("orbit_proxy", orbit, 0.04),        # unmapped; should need a human
 ]
 
 
@@ -149,6 +176,7 @@ def main() -> int:
         batch_size=args.batch_size,
     )
     normalizer = Normalizer(registry)
+    ocsf = OCSFStore(args.data / "ocsf.db")
 
     now_ns = time.time_ns()
     span_ns = int(args.hours * 3600 * 1e9)
@@ -179,8 +207,12 @@ def main() -> int:
         ledger.seal(mapping_set=mapping_set)
 
     outcomes = {"full": 0, "partial": 0, "quarantined": 0}
+    records = []
     for event in events:
-        outcomes[normalizer.normalize(event).parse_status.value] += 1
+        record = normalizer.normalize(event)
+        outcomes[record.parse_status.value] += 1
+        records.append(record)
+    ocsf.upsert(records)
 
     day = time.strftime("%Y-%m-%d", time.gmtime())
     try:
@@ -193,8 +225,11 @@ def main() -> int:
     print(f"  outcomes : {outcomes}")
     print(f"  verify   : {ledger.verify(store=store)}")
 
+    print(f"  quarantine: {ocsf.quarantine_summary()}")
+
     store.close()
     ledger.close()
+    ocsf.close()
     return 0
 
 

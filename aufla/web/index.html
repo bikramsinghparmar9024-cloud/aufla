@@ -133,6 +133,37 @@
   input[type=search] { min-width:230px; }
   .verdict { font:600 12.5px var(--mono); }
   .ok { color:var(--good); } .bad { color:var(--crit); }
+  /* review queue */
+  .badge {
+    background:var(--warn); color:#1a1400; border-radius:99px; padding:0 6px;
+    font-size:10.5px; font-weight:700; margin-left:6px;
+  }
+  .prop { border-bottom:1px solid var(--line); padding:16px; }
+  .prop:last-child { border-bottom:0; }
+  .prop-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .prop-head b { font-size:14px; }
+  .conf {
+    font:600 12px var(--mono); padding:3px 9px; border-radius:5px;
+    background:#3a1416; color:#f2706e;
+  }
+  .conf.ok { background:#0d2f1a; color:#4ec96e; }
+  .checks { display:grid; gap:5px; margin:12px 0; }
+  .chk { display:flex; gap:9px; align-items:baseline; font-size:12.5px; }
+  .chk .mark { font:700 11px var(--mono); width:42px; flex:none; }
+  .chk.pass .mark { color:var(--good); }
+  .chk.fail .mark { color:var(--crit); }
+  .chk .cname { width:120px; flex:none; color:var(--ink); }
+  .chk .cdetail { color:var(--ink-2); }
+  .prop-cols { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px; }
+  @media (max-width:1100px){ .prop-cols{ grid-template-columns:1fr; } }
+  .decide { display:flex; gap:9px; align-items:center; margin-top:14px; flex-wrap:wrap; }
+  .decide input {
+    background:var(--surface-2); color:var(--ink); border:1px solid var(--line);
+    border-radius:6px; padding:7px 10px; font:13px var(--sans); min-width:190px;
+  }
+  button.approve { background:var(--good); color:#03210a; }
+  button.reject  { background:transparent; color:var(--crit); border:1px solid var(--crit); }
+
   /* segmented time-window control */
   .seg { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
   .seg button {
@@ -189,6 +220,7 @@
     <button data-v="overview" class="on">Overview</button>
     <button data-v="events">Events</button>
     <button data-v="sources">Sources</button>
+    <button data-v="review">Review <span class="badge" id="rv-badge" hidden>0</span></button>
     <button data-v="integrity">Integrity</button>
   </nav>
   <div class="grow"></div>
@@ -301,6 +333,34 @@
         <p style="margin-top:0">A mapping is a YAML file. Drop one into <code class="mono">sources/</code> and the next event from that source normalises — no restart, no code change, no redeploy.</p>
         <p><b style="color:var(--ink)">The same file is what the AI lane produces.</b> For a format nobody recognises, Drain3 mines the template and a grammar-constrained local model proposes a mapping; deterministic checks score it and an analyst approves it. Human and machine author the identical artifact, so every automated decision stays reviewable, diffable and version-controlled.</p>
         <p style="margin-bottom:0">Unknown OCSF targets, unknown classes, duplicate rule names and shadowing catch-all rules are all rejected at load — whoever wrote the file.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- REVIEW -->
+  <section class="view" id="v-review">
+    <div class="tiles" id="q-tiles"></div>
+
+    <div class="bar" style="margin-top:16px">
+      <button class="act" id="discoverbtn">Run discovery on quarantine</button>
+      <span class="lbl" style="margin:0" id="discover-note"></span>
+    </div>
+
+    <div class="card">
+      <h2>Awaiting human approval
+        <span class="note">a proposal below 95% confidence never activates on its own</span>
+      </h2>
+      <div id="proposals"><div class="empty">Nothing awaiting review.</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="card">
+        <h2>Still quarantined by source</h2>
+        <div class="pad" id="q-sources"></div>
+      </div>
+      <div class="card">
+        <h2>Decision log</h2>
+        <div class="pad" id="q-history"></div>
       </div>
     </div>
   </section>
@@ -486,7 +546,8 @@ async function loadOverview() {
     ["Sealed", s.sealed_events.toLocaleString(), `${s.batches} Merkle batches`],
     ["Normalised", `${(o.avg_coverage*100).toFixed(0)}%`, "mean field coverage"],
     ["Sources", String(s.mappings), "hot-reloaded mappings"],
-    ["Checkpoints", String(s.checkpoints), "offline-signed"],
+    ["Quarantined", `${s.quarantine.ever_quarantined.toLocaleString()}`,
+      `${s.quarantine.resolved.toLocaleString()} resolved · ${s.quarantine.pending.toLocaleString()} pending`],
     ["Chain head", s.chain_head.slice(0,10)+"…", "SHA-256"],
   ].map(([k,v,sub]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="sub">${sub}</div></div>`).join("");
 
@@ -617,6 +678,141 @@ async function loadSources() {
     </tr>`).join("");
 }
 
+async function loadReview() {
+  const [q, props] = await Promise.all([get("/api/quarantine"), get("/api/proposals")]);
+
+  $("#q-tiles").innerHTML = [
+    ["Ever quarantined", q.ever_quarantined.toLocaleString(), "arrived with no mapping"],
+    ["Since resolved", q.resolved.toLocaleString(),
+      `${(q.resolution_rate*100).toFixed(0)}% backfilled from raw`],
+    ["Still pending", q.pending.toLocaleString(), "awaiting a mapping"],
+    ["Awaiting review", String(props.length), `below ${(q.bar*100).toFixed(0)}% confidence`],
+    ["Approved", String(q.proposals.approved || 0), "mappings activated"],
+    ["Rejected", String(q.proposals.rejected || 0), "sent back"],
+  ].map(([k,v,sub]) =>
+    `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="sub">${sub}</div></div>`
+  ).join("");
+
+  const badge = $("#rv-badge");
+  badge.hidden = props.length === 0;
+  badge.textContent = String(props.length);
+
+  $("#proposals").innerHTML = props.length ? props.map(p => {
+    const r = p.report || {};
+    const checks = (r.checks || []).map(c =>
+      `<div class="chk ${c.passed?"pass":"fail"}">
+         <span class="mark">${c.passed?"PASS":"FAIL"}</span>
+         <span class="cname">${esc(c.name)}</span>
+         <span class="cdetail">${esc(c.detail)}</span>
+       </div>`).join("");
+
+    const samples = (r.samples || []).slice(0,3).map(s => `
+      <div style="margin-bottom:10px">
+        <pre style="max-height:70px">${esc(s.raw)}</pre>
+        <div class="mono" style="font-size:11px;color:var(--ink-2);padding:5px 2px">
+          ${esc(Object.entries(s.fields||{})
+              .filter(([k])=>k.includes("endpoint"))
+              .map(([k,v])=>`${k.replace("_endpoint","")}=${v}`).join("  ") || "no endpoint fields")}
+        </div>
+        ${(s.warnings||[]).map(w=>`<div style="color:var(--warn);font-size:11.5px">! ${esc(w)}</div>`).join("")}
+      </div>`).join("");
+
+    return `<div class="prop" data-id="${p.proposal_id}">
+      <div class="prop-head">
+        <b>${esc(p.source_id)}</b>
+        <span class="lbl" style="margin:0">${esc(p.format)} · OCSF ${p.ocsf_class} · ${p.sample_count} samples</span>
+        <span class="grow" style="flex:1"></span>
+        <span class="conf ${p.confidence >= (r.bar||0.95) ? "ok":""}">
+          confidence ${(p.confidence*100).toFixed(0)}% · bar ${((r.bar||0.95)*100).toFixed(0)}%
+        </span>
+      </div>
+      <div class="checks">${checks}</div>
+      <div class="prop-cols">
+        <div>
+          <div class="lbl">Proposed mapping</div>
+          <pre style="max-height:230px">${esc(p.yaml)}</pre>
+        </div>
+        <div>
+          <div class="lbl">Applied to real events</div>
+          ${samples || '<div class="empty">No samples.</div>'}
+        </div>
+      </div>
+      <div class="decide">
+        <input type="text" class="who" placeholder="Your name or analyst id" autocomplete="off">
+        <button class="act approve">Approve and backfill</button>
+        <button class="act reject">Reject</button>
+        <span class="lbl decide-msg" style="margin:0"></span>
+      </div>
+    </div>`;
+  }).join("") : `<div class="empty">Nothing awaiting review.</div>`;
+
+  document.querySelectorAll(".prop").forEach(el => {
+    const id = el.dataset.id;
+    const who = el.querySelector(".who");
+    const msg = el.querySelector(".decide-msg");
+
+    const decide = async (action) => {
+      const by = who.value.trim();
+      if (!by) {
+        // Refused in the API too; caught here so the analyst sees why.
+        msg.innerHTML = `<span style="color:var(--crit)">Enter who is deciding — an approval is an audit record.</span>`;
+        who.focus();
+        return;
+      }
+      el.querySelectorAll("button").forEach(b => b.disabled = true);
+      msg.textContent = action === "approve" ? "approving and backfilling…" : "rejecting…";
+      const res = await fetch(`/api/proposals/${id}/${action}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({by}),
+      }).then(r => r.json());
+
+      if (res.error) {
+        msg.innerHTML = `<span style="color:var(--crit)">${esc(res.error)}</span>`;
+        el.querySelectorAll("button").forEach(b => b.disabled = false);
+        return;
+      }
+      msg.innerHTML = res.approved
+        ? `<span style="color:var(--good)">approved — ${res.backfill.normalized} events backfilled from raw</span>`
+        : `<span style="color:var(--ink-2)">rejected</span>`;
+      setTimeout(loadReview, 900);
+    };
+
+    el.querySelector(".approve").onclick = () => decide("approve");
+    el.querySelector(".reject").onclick = () => decide("reject");
+  });
+
+  $("#q-sources").innerHTML = q.by_source.length
+    ? q.by_source.map(([s,n]) => `
+        <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line)">
+          <span>${esc(s)}</span><span class="num" style="color:var(--ink-2)">${n.toLocaleString()}</span>
+        </div>`).join("")
+    : `<div class="empty">Nothing quarantined.</div>`;
+
+  $("#q-history").innerHTML = q.recent.length
+    ? q.recent.map(h => `
+        <div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:13px">
+          <span class="pill ${h.state==="approved"?"full":"quarantined"}">${esc(h.state)}</span>
+          <b style="margin-left:8px">${esc(h.source)}</b>
+          <span style="color:var(--ink-2)"> by ${esc(h.decided_by||"—")} at
+            ${(h.confidence*100).toFixed(0)}% confidence</span>
+        </div>`).join("")
+    : `<div class="empty">No decisions yet.</div>`;
+}
+
+$("#discoverbtn").onclick = async () => {
+  const b = $("#discoverbtn");
+  b.disabled = true; b.textContent = "scanning quarantine…";
+  const r = await post("/api/discovery/run");
+  b.disabled = false; b.textContent = "Run discovery on quarantine";
+  const parts = [];
+  if (r.auto_approved?.length) parts.push(`${r.auto_approved.length} auto-approved (all checks passed)`);
+  if (r.queued?.length) parts.push(`${r.queued.length} sent to review`);
+  if (r.skipped?.length) parts.push(`${r.skipped.length} skipped`);
+  $("#discover-note").textContent = parts.join(" · ") || "nothing in quarantine";
+  loadReview();
+};
+
 async function loadIntegrity() {
   const d = await get("/api/integrity");
   $("#chain-note").textContent = `${d.batch_total} batches`;
@@ -670,7 +866,7 @@ $("#livebtn").onclick = async () => {
 function show(v) {
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.v===v));
   document.querySelectorAll(".view").forEach(s => s.classList.toggle("on", s.id==="v-"+v));
-  ({overview:loadOverview, events:loadEvents, sources:loadSources, integrity:loadIntegrity})[v]();
+  ({overview:loadOverview, events:loadEvents, sources:loadSources, review:loadReview, integrity:loadIntegrity})[v]();
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.v));
 
@@ -728,11 +924,20 @@ async function tick(fast) {
   const streaming = updateFollowUi();
   const view = document.querySelector("nav button.on").dataset.v;
 
+  if (lastStatus.ui_version && !fast) {
+    const q = await get("/api/quarantine");
+    const badge = document.getElementById("rv-badge");
+    const n = q.proposals.pending || 0;
+    badge.hidden = n === 0;
+    badge.textContent = String(n);
+  }
+
   if (view === "events") {
     if (streaming) await loadEvents();
   } else if (!fast && lastStatus.running) {
     if (view === "overview") await loadOverview();
     else if (view === "integrity") await loadIntegrity();
+    else if (view === "review") await loadReview();
   }
 }
 

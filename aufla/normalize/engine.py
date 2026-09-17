@@ -47,6 +47,11 @@ class NormalizedRecord:
     fields: dict[str, Any] = field(default_factory=dict)
     unmapped: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    # Informational remarks that are not defects: a device that supplied no
+    # parseable time is incomplete, not suspicious. Keeping these out of
+    # `warnings` matters because the confidence gate reads warnings as evidence
+    # that a mapping may be wrong, and a completeness note is no such thing.
+    notes: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     mapping_coverage: float = 0.0
 
@@ -231,7 +236,7 @@ class Normalizer:
             # event undatable. Falling back to the receipt clock is honest
             # provided we say so, which the warning does.
             candidate["time"] = record.observed_time
-            record.warnings.append(
+            record.notes.append(
                 "device time not mapped; 'time' falls back to the receipt clock"
             )
 

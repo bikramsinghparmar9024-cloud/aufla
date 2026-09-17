@@ -165,13 +165,16 @@ def test_the_bundled_source_mappings_all_load():
     report = reg.refresh()
 
     assert report.ok, f"bundled mappings failed to load: {report.failed}"
-    assert set(reg.sources) == {
+    # A subset, not an exact set: the discovery lane writes approved mappings
+    # into this same directory at runtime, which is the point -- an authored
+    # mapping gets no separate location and no separate treatment.
+    assert {
         "pfsense_filterlog",
         "suricata_eve",
         "squid_access",
         "windows_netconn",
         "windows_eventlog",
-    }
+    } <= set(reg.sources)
 
 
 def test_bundled_mappings_are_approved_and_cover_expected_classes():

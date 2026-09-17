@@ -21,7 +21,7 @@ from .models import Transport
 from .normalize import Normalizer
 from .output import export_records, get_adapter
 from .pipeline import Pipeline
-from .storage import SQLiteRawStore
+from .storage import OCSFStore, SQLiteRawStore
 
 DEFAULT_DATA = Path("data")
 DEFAULT_SOURCES = Path("sources")
@@ -40,15 +40,16 @@ def _open(data_dir: Path, sources_dir: Path):
     report = registry.refresh()
     for path, error in report.failed:
         print(f"warning: {path}: {error}", file=sys.stderr)
-    return store, ledger, registry
+    ocsf = OCSFStore(data_dir / "ocsf.db")
+    return store, ledger, registry, ocsf
 
 
 # --- commands ------------------------------------------------------------
 
 
 def cmd_ingest(args) -> int:
-    store, ledger, registry = _open(args.data, args.sources)
-    pipeline = Pipeline(store, ledger, registry)
+    store, ledger, registry, ocsf = _open(args.data, args.sources)
+    pipeline = Pipeline(store, ledger, registry, ocsf=ocsf)
 
     payloads = [
         line.rstrip(b"\r\n")
@@ -72,15 +73,17 @@ def cmd_ingest(args) -> int:
 
     store.close()
     ledger.close()
+    ocsf.close()
     return 0
 
 
 def cmd_verify(args) -> int:
-    store, ledger, _ = _open(args.data, args.sources)
+    store, ledger, _, ocsf = _open(args.data, args.sources)
     result = ledger.verify(store=None if args.ledger_only else store)
     print(result)
     store.close()
     ledger.close()
+    ocsf.close()
     return 0 if result.ok else 1
 
 
@@ -119,7 +122,7 @@ def cmd_detect(args) -> int:
 
 
 def cmd_export(args) -> int:
-    store, ledger, registry = _open(args.data, args.sources)
+    store, ledger, registry, ocsf = _open(args.data, args.sources)
     normalizer = Normalizer(registry)
     records = [
         normalizer.normalize(e)
@@ -137,11 +140,12 @@ def cmd_export(args) -> int:
 
     store.close()
     ledger.close()
+    ocsf.close()
     return 0
 
 
 def cmd_certificate(args) -> int:
-    store, ledger, registry = _open(args.data, args.sources)
+    store, ledger, registry, ocsf = _open(args.data, args.sources)
     certificate = build_certificate(
         ledger,
         store=store,
@@ -156,11 +160,12 @@ def cmd_certificate(args) -> int:
         print(text)
     store.close()
     ledger.close()
+    ocsf.close()
     return 0
 
 
 def cmd_checkpoint(args) -> int:
-    store, ledger, _ = _open(args.data, args.sources)
+    store, ledger, _, ocsf = _open(args.data, args.sources)
     try:
         checkpoint = ledger.create_checkpoint(args.day)
     except ValueError as exc:
@@ -175,6 +180,7 @@ def cmd_checkpoint(args) -> int:
     )
     store.close()
     ledger.close()
+    ocsf.close()
     return 0
 
 
@@ -183,12 +189,13 @@ def cmd_serve(args) -> int:
 
     # Open once so the databases and keys exist, then hand the server the data
     # directory: it opens per-request connections on its own threads.
-    store, ledger, registry = _open(args.data, args.sources)
+    store, ledger, registry, ocsf = _open(args.data, args.sources)
     store.close()
     ledger.close()
 
     serve(
         args.data,
+        args.sources,
         registry,
         host=args.host,
         port=args.port,
@@ -197,16 +204,87 @@ def cmd_serve(args) -> int:
     return 0
 
 
+def cmd_discover(args) -> int:
+    from .discovery import ProposalStore, approve_proposal, run_discovery
+
+    store, ledger, registry, ocsf = _open(args.data, args.sources)
+    proposals = ProposalStore(args.data / "proposals.db")
+    pipeline = Pipeline(store, ledger, registry, ocsf=ocsf)
+
+    if args.approve is not None:
+        if not args.by:
+            print("error: --by is required; an approval must name a person",
+                  file=sys.stderr)
+            return 1
+        outcome = approve_proposal(
+            pipeline, proposals, args.sources, args.approve, approved_by=args.by
+        )
+        print(outcome)
+    else:
+        result = run_discovery(pipeline, proposals, args.sources)
+        for source in result.auto_approved:
+            print(f"auto-approved {source}: all checks passed, "
+                  f"{result.backfilled.get(source, 0)} events backfilled")
+        for q in result.queued:
+            print(f"review needed  {q['source']}: confidence "
+                  f"{q['confidence']:.2f} < {q['bar']} "
+                  f"(failed: {', '.join(q['failed'])}) -> proposal {q['proposal_id']}")
+        for s_ in result.skipped:
+            print(f"skipped        {s_['source']}: {s_['reason']}")
+        if not (result.auto_approved or result.queued or result.skipped):
+            print("nothing in quarantine")
+
+    proposals.close()
+    store.close()
+    ledger.close()
+    ocsf.close()
+    return 0
+
+
+def cmd_quarantine(args) -> int:
+    from .discovery import ProposalStore
+
+    store, ledger, registry, ocsf = _open(args.data, args.sources)
+    proposals = ProposalStore(args.data / "proposals.db")
+
+    summary = ocsf.quarantine_summary()
+    print(f"ever quarantined : {summary['ever_quarantined']}")
+    print(f"since resolved   : {summary['resolved']} "
+          f"({summary['resolution_rate']:.0%})")
+    print(f"still pending    : {summary['pending']}")
+    for source, n in ocsf.quarantined_sources():
+        print(f"  {source:<24} {n}")
+
+    pending = proposals.pending()
+    if pending:
+        print(f"\nawaiting review: {len(pending)}")
+        for p_ in pending:
+            print(f"  [{p_.proposal_id}] {p_.source_id:<20} "
+                  f"confidence {p_.confidence:.2f}  failed: "
+                  f"{', '.join(p_.report.get('failed', []))}")
+
+    proposals.close()
+    store.close()
+    ledger.close()
+    ocsf.close()
+    return 0
+
+
 def cmd_stats(args) -> int:
-    store, ledger, registry = _open(args.data, args.sources)
+    store, ledger, registry, ocsf = _open(args.data, args.sources)
     print(f"raw events   : {store.count()}")
     print(f"sealed events: {ledger.event_count}")
     print(f"batches      : {ledger.batch_count}")
     print(f"chain head   : {ledger.head}")
     print(f"checkpoints  : {len(ledger.checkpoints())}")
     print(f"mappings     : {len(registry)} ({', '.join(registry.sources)})")
+    q = ocsf.quarantine_summary()
+    print(f"projected    : {ocsf.count()}")
+    print(f"quarantined  : {q['ever_quarantined']} ever, "
+          f"{q['resolved']} resolved, {q['pending']} pending")
     store.close()
     ledger.close()
+    ocsf.close()
     return 0
 
 
@@ -277,6 +355,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="seconds between live-capture polls (default: 10)",
     )
     p.set_defaults(func=cmd_serve)
+
+    p = sub.add_parser("discover", help="propose mappings for quarantined sources")
+    p.add_argument("--approve", type=int, help="approve a queued proposal by id")
+    p.add_argument("--by", help="who is approving (required with --approve)")
+    p.set_defaults(func=cmd_discover)
+
+    p = sub.add_parser("quarantine", help="quarantine and review-queue status")
+    p.set_defaults(func=cmd_quarantine)
 
     p = sub.add_parser("stats", help="show store and ledger counters")
     p.set_defaults(func=cmd_stats)

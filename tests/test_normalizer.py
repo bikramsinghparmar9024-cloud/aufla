@@ -218,7 +218,11 @@ def test_a_missing_device_time_falls_back_to_the_receipt_clock(normalizer):
 
     assert record.parse_status is ParseStatus.FULL
     assert record.fields["time"] == record.observed_time
-    assert any("falls back" in w for w in record.warnings)
+    # A note, not a warning: the device was incomplete, not suspicious. The
+    # confidence gate reads warnings as evidence a mapping may be wrong, so
+    # completeness remarks must stay out of that channel.
+    assert any("falls back" in n for n in record.notes)
+    assert record.warnings == []
 
 
 # --- coverage ------------------------------------------------------------

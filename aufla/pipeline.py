@@ -1,10 +1,12 @@
-"""The ingest pipeline: capture, seal, normalise.
+"""The ingest pipeline: capture, seal, normalise, persist.
 
 Order matters and is not negotiable:
 
 1. **Capture** the bytes into the raw store.
 2. **Seal** them into the ledger.
 3. **Normalise**, which may fail, quarantine, or be deferred indefinitely.
+4. **Persist** the projection, so the OCSF form is materialised rather than
+   recomputed on every read.
 
 Steps 1 and 2 are deterministic and bounded. Step 3 is where mappings, and
 eventually a model, get involved -- so it runs last and can fail without
@@ -21,7 +23,7 @@ from .ledger import Ledger
 from .mapping import MappingRegistry
 from .models import ParseStatus, RawEvent, Transport
 from .normalize import NormalizedRecord, Normalizer
-from .storage import RawStore
+from .storage import OCSFStore, RawStore
 
 __all__ = ["Pipeline", "IngestResult"]
 
@@ -37,6 +39,7 @@ class IngestResult:
     normalized: int = 0
     partial: int = 0
     quarantined: int = 0
+    resolved: int = 0
     records: list[NormalizedRecord] = field(default_factory=list)
 
     @property
@@ -45,16 +48,17 @@ class IngestResult:
         return 0.0 if not self.accepted else self.normalized / self.accepted
 
     def __str__(self) -> str:
-        return (
+        out = (
             f"{self.accepted} accepted ({self.duplicates} duplicate), "
             f"{self.sealed_batches} batches sealed, "
             f"{self.normalized} normalised, {self.partial} partial, "
             f"{self.quarantined} quarantined"
         )
+        return out + (f", {self.resolved} resolved" if self.resolved else "")
 
 
 class Pipeline:
-    """Wires the raw store, the ledger and the normaliser together."""
+    """Wires the raw store, the ledger, the normaliser and the projection."""
 
     def __init__(
         self,
@@ -63,11 +67,13 @@ class Pipeline:
         registry: MappingRegistry,
         *,
         normalizer: Normalizer | None = None,
+        ocsf: OCSFStore | None = None,
     ) -> None:
         self.store = store
         self.ledger = ledger
         self.registry = registry
         self.normalizer = normalizer or Normalizer(registry)
+        self.ocsf = ocsf
 
     def ingest(
         self,
@@ -81,13 +87,12 @@ class Pipeline:
         """Ingest raw payloads from one source."""
         result = IngestResult()
 
-        events: list[RawEvent] = []
-        for payload in payloads:
-            events.append(
-                RawEvent.capture(
-                    payload, source_id, transport=transport, source_ip=source_ip
-                )
+        events = [
+            RawEvent.capture(
+                payload, source_id, transport=transport, source_ip=source_ip
             )
+            for payload in payloads
+        ]
         result.submitted = len(events)
         if not events:
             return result
@@ -119,6 +124,10 @@ class Pipeline:
             else:
                 result.quarantined += 1
 
+        # 4. Persist the projection.
+        if self.ocsf is not None and result.records:
+            result.resolved = self.ocsf.upsert(result.records)["resolved"]
+
         return result
 
     def _accepted_only(self, events: Sequence[RawEvent]) -> list[RawEvent]:
@@ -133,19 +142,40 @@ class Pipeline:
                 out.append(event)
         return out
 
-    def backfill(self, source_id: str) -> list[NormalizedRecord]:
+    def backfill(self, source_id: str, *, batch: int = 500) -> dict[str, int]:
         """Re-derive projections for one source from the raw store.
 
         This is the operation that makes a mapping correction safe: rather than
-        patching normalised rows, they are rebuilt from the canonical bytes.
-        It is only possible because raw is canonical.
+        patching normalised rows, they are rebuilt from the canonical bytes. It
+        is only possible because raw is canonical.
+
+        Work is committed in batches so a long backfill cannot hold a single
+        transaction open across millions of events.
         """
         self.registry.refresh()
-        return [
-            self.normalizer.normalize(event)
-            for event in self.store.iter_events(source_id=source_id)
-        ]
+        totals = {"processed": 0, "normalized": 0, "resolved": 0}
+        pending: list[NormalizedRecord] = []
 
-    def verify(self, **kwargs) -> "object":
+        def flush() -> None:
+            if not pending or self.ocsf is None:
+                pending.clear()
+                return
+            outcome = self.ocsf.upsert(pending)
+            totals["resolved"] += outcome["resolved"]
+            pending.clear()
+
+        for event in self.store.iter_events(source_id=source_id):
+            record = self.normalizer.normalize(event)
+            totals["processed"] += 1
+            if record.parse_status is not ParseStatus.QUARANTINED:
+                totals["normalized"] += 1
+            pending.append(record)
+            if len(pending) >= batch:
+                flush()
+
+        flush()
+        return totals
+
+    def verify(self, **kwargs) -> object:
         """Recompute the chain against the raw store."""
         return self.ledger.verify(store=self.store, **kwargs)

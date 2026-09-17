@@ -1,4 +1,4 @@
-"""The AUFLA dashboard: read-only forensics plus append-only live capture.
+"""The AUFLA dashboard.
 
 Built on the standard library rather than a web framework, for the same reason
 the rest of AUFLA is: it has to run on an air-gapped host with nothing
@@ -7,25 +7,23 @@ Content-Security-Policy of ``default-src 'self'``.
 
 What the browser may and may not do
 -----------------------------------
-Every GET route is read-only. The only writes the UI can trigger are
-``/api/live/start`` and ``/api/live/stop``, which control the local collector.
-That collector **only appends**: it captures new events from this host, stores
-and seals them. Nothing reachable from a browser can update or delete an
-existing event, ledger row, or mapping. The guarantee on existing evidence is
-unchanged; the button adds new evidence.
+Every GET route is read-only. Four POST routes exist, and each of them only
+ever *adds*:
 
-Threading and database handles
-------------------------------
-Requests are handled on threads, and **each request opens its own SQLite
-connections**, because Python reports ``sqlite3.threadsafety == 1`` here: a
-connection may not be shared between threads.
+``/api/live/start`` and ``/api/live/stop``
+    control local collection, which appends new events;
+``/api/discovery/run``
+    proposes mappings for quarantined sources;
+``/api/proposals/<id>/approve`` and ``/reject``
+    record a named person's decision on a proposal.
 
-Serial handling was tried first and is wrong for a browser client. Browsers
-preconnect -- they open speculative sockets and send nothing on them. A
-single-threaded server accepts one of those and blocks reading it forever, so
-the UI hangs even though every request it did send was answered. ``curl`` never
-behaves that way, which is exactly why a curl-based smoke test passes while the
-real page hangs.
+Nothing reachable from a browser updates or deletes an existing event or
+ledger row. Approving a mapping rewrites the *derived* projection, which is
+rebuildable from raw by definition; the evidence underneath is untouched.
+
+Reads come from the materialised OCSF projection, not from re-parsing raw on
+every request. Aggregations are SQL. That is the difference between a console
+that works on a demo dataset and one that works on a real day's traffic.
 """
 
 from __future__ import annotations
@@ -33,7 +31,6 @@ from __future__ import annotations
 import json
 import time
 import uuid
-from collections import Counter, defaultdict
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from functools import partial
@@ -43,20 +40,19 @@ from typing import Any, Iterator
 from urllib.parse import parse_qs, urlparse
 
 from ..collect import LiveCollector
+from ..discovery import CONFIDENCE_BAR, ProposalStore, approve_proposal, run_discovery
 from ..ledger import Ledger
 from ..ledger.signing import load_or_create_keypair
 from ..mapping import MappingRegistry
 from ..normalize import Normalizer
 from ..ocsf.classes import CATALOG
 from ..pipeline import Pipeline
-from ..storage import SQLiteRawStore
+from ..storage import OCSFStore, SQLiteRawStore
 
 __all__ = ["build_server", "serve", "ForensicHandler"]
 
 STATIC = Path(__file__).parent / "index.html"
 
-# Windows the Overview can be scoped to. "all" is absent on purpose: an
-# unbounded window is the default only when explicitly chosen.
 RANGES: dict[str, int] = {
     "15m": 900, "1h": 3600, "6h": 21600, "24h": 86400, "7d": 604800,
 }
@@ -78,26 +74,35 @@ class ForensicHandler(BaseHTTPRequestHandler):
         self,
         *args,
         data_dir: Path,
+        sources_dir: Path,
         registry: MappingRegistry,
         collector: LiveCollector,
         **kwargs,
     ) -> None:
         self.data_dir = data_dir
+        self.sources_dir = sources_dir
         self.registry = registry
         self.collector = collector
         self.normalizer = Normalizer(registry)
         super().__init__(*args, **kwargs)
 
     @contextmanager
-    def _db(self) -> Iterator[tuple[SQLiteRawStore, Ledger]]:
+    def _db(self) -> Iterator[tuple[SQLiteRawStore, Ledger, OCSFStore, ProposalStore]]:
         """Connections owned by this request's thread, closed on exit."""
         store = SQLiteRawStore(self.data_dir / "raw.db")
         ledger = Ledger(self.data_dir / "ledger.db")
+        ocsf = OCSFStore(self.data_dir / "ocsf.db")
+        proposals = ProposalStore(self.data_dir / "proposals.db")
         try:
-            yield store, ledger
+            yield store, ledger, ocsf, proposals
         finally:
             store.close()
             ledger.close()
+            ocsf.close()
+            proposals.close()
+
+    def _pipeline(self, store, ledger, ocsf) -> Pipeline:
+        return Pipeline(store, ledger, self.registry, ocsf=ocsf)
 
     # ---- plumbing ---------------------------------------------------------
 
@@ -127,6 +132,18 @@ class ForensicHandler(BaseHTTPRequestHandler):
             "application/json; charset=utf-8",
         )
 
+    def _body(self) -> dict[str, Any]:
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            return {}
+        if length <= 0:
+            return {}
+        try:
+            return json.loads(self.rfile.read(length).decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            return {}
+
     # ---- routing ----------------------------------------------------------
 
     def do_POST(self) -> None:  # noqa: N802
@@ -138,14 +155,12 @@ class ForensicHandler(BaseHTTPRequestHandler):
             elif route == "/api/live/stop":
                 self.collector.stop()
                 self._json(self.collector.status.as_dict())
+            elif route == "/api/discovery/run":
+                self._json(self._run_discovery())
+            elif route.startswith("/api/proposals/"):
+                self._json(self._decide(route))
             else:
-                self._json(
-                    {
-                        "error": "read-only: the only writes are "
-                        "/api/live/start and /api/live/stop"
-                    },
-                    status=405,
-                )
+                self._json({"error": f"no write route {route}"}, status=405)
         except Exception as exc:  # pragma: no cover - defensive
             self._json({"error": f"{type(exc).__name__}: {exc}"}, status=500)
 
@@ -162,24 +177,26 @@ class ForensicHandler(BaseHTTPRequestHandler):
                 self._json(self._sources())
                 return
             if route == "/api/live/status":
-                # ui_version rides along on the status poll the page already
-                # makes. An open tab never re-fetches its own HTML on its own,
-                # so without this a dashboard left open across an edit keeps
-                # running the old page indefinitely and looks unfixed.
                 self._json(
                     {**self.collector.status.as_dict(), "ui_version": _ui_version()}
                 )
                 return
 
-            with self._db() as (store, ledger):
+            with self._db() as (store, ledger, ocsf, proposals):
                 if route == "/api/stats":
-                    self._json(self._stats(store, ledger))
+                    self._json(self._stats(store, ledger, ocsf, proposals))
                 elif route == "/api/overview":
-                    self._json(self._overview(store, ledger, query))
+                    self._json(self._overview(ocsf, query))
                 elif route == "/api/events":
-                    self._json(self._events(store, query))
+                    self._json(self._events(ocsf, query))
                 elif route.startswith("/api/event/"):
-                    self._json(self._event(store, ledger, route.rsplit("/", 1)[-1]))
+                    self._json(
+                        self._event(store, ledger, ocsf, route.rsplit("/", 1)[-1])
+                    )
+                elif route == "/api/quarantine":
+                    self._json(self._quarantine(ocsf, proposals))
+                elif route == "/api/proposals":
+                    self._json(self._proposals(proposals))
                 elif route == "/api/integrity":
                     self._json(self._integrity(ledger))
                 elif route == "/api/verify":
@@ -192,9 +209,50 @@ class ForensicHandler(BaseHTTPRequestHandler):
     def _serve_page(self) -> None:
         self._send(200, STATIC.read_bytes(), "text/html; charset=utf-8")
 
+    # ---- discovery --------------------------------------------------------
+
+    def _run_discovery(self) -> dict[str, Any]:
+        with self._db() as (store, ledger, ocsf, proposals):
+            pipeline = self._pipeline(store, ledger, ocsf)
+            result = run_discovery(pipeline, proposals, self.sources_dir)
+            return result.as_dict()
+
+    def _decide(self, route: str) -> dict[str, Any]:
+        parts = route.strip("/").split("/")
+        if len(parts) != 4:
+            return {"error": f"no write route {route}"}
+        try:
+            proposal_id = int(parts[2])
+        except ValueError:
+            return {"error": f"not a proposal id: {parts[2]}"}
+
+        action = parts[3]
+        payload = self._body()
+        who = (payload.get("by") or "").strip()
+        if not who:
+            # A decision with no name attached is not an audit record. The API
+            # refuses rather than inventing an actor.
+            return {"error": "an approval must name the person making it"}
+
+        with self._db() as (store, ledger, ocsf, proposals):
+            if action == "approve":
+                pipeline = self._pipeline(store, ledger, ocsf)
+                return approve_proposal(
+                    pipeline, proposals, self.sources_dir, proposal_id,
+                    approved_by=who, note=payload.get("note"),
+                )
+            if action == "reject":
+                decided = proposals.decide(
+                    proposal_id, state="rejected", by=who, note=payload.get("note")
+                )
+                if decided is None:
+                    return {"error": f"no pending proposal {proposal_id}"}
+                return {"rejected": decided.source_id, "by": who}
+        return {"error": f"unknown action {action}"}
+
     # ---- data -------------------------------------------------------------
 
-    def _stats(self, store, ledger) -> dict[str, Any]:
+    def _stats(self, store, ledger, ocsf, proposals) -> dict[str, Any]:
         return {
             "raw_events": store.count(),
             "sealed_events": ledger.event_count,
@@ -202,106 +260,79 @@ class ForensicHandler(BaseHTTPRequestHandler):
             "checkpoints": len(ledger.checkpoints()),
             "chain_head": ledger.head,
             "mappings": len(self.registry),
+            "projected": ocsf.count(),
+            "quarantine": ocsf.quarantine_summary(),
+            "proposals": proposals.counts(),
         }
 
-    def _overview(self, store, ledger, query) -> dict[str, Any]:
-        """Aggregations for the dashboard charts, computed in one pass.
-
-        Scoped to a time window. Seeded history and live capture arrive at very
-        different rates, so a single all-time axis flattens hours of detail
-        under one spike; the window is how an analyst gets back to the scale
-        they care about.
-        """
+    def _window(self, query) -> tuple[str, int | None]:
         window = (query.get("range", [DEFAULT_RANGE])[0] or DEFAULT_RANGE).lower()
         if window != "all" and window not in RANGES:
-            # An unrecognised window falls back to the default, not to
-            # unbounded. Quietly widening to everything on a typo is how a
-            # console ends up showing far more than the reader asked for.
             window = DEFAULT_RANGE
         seconds = RANGES.get(window)
-        since_ns = None if seconds is None else time.time_ns() - seconds * 1_000_000_000
-        by_source: Counter[str] = Counter()
-        by_status: Counter[str] = Counter()
-        by_class: Counter[str] = Counter()
-        by_severity: Counter[int] = Counter()
-        talkers: Counter[str] = Counter()
-        timeline: dict[int, Counter[str]] = defaultdict(Counter)
-        findings: list[dict[str, Any]] = []
-        coverage_sum = 0.0
-        counted = 0
+        since_ms = (
+            None if seconds is None else int(time.time() * 1000) - seconds * 1000
+        )
+        return window, since_ms
 
-        events = list(store.iter_events(since_ns=since_ns))
-        # Bucket the observed window into ~40 columns so the timeline reads the
-        # same whether it covers two minutes of live capture or a whole day.
-        times = [e.received_at_ns // 1_000_000 for e in events]
-        lo, hi = (min(times), max(times)) if times else (0, 0)
-        span = max(hi - lo, 1)
-        bucket_ms = max(span // 40, 1000)
+    def _overview(self, ocsf, query) -> dict[str, Any]:
+        window, since_ms = self._window(query)
 
-        for event in events:
-            record = self.normalizer.normalize(event)
-            by_source[event.source_id] += 1
-            by_status[record.parse_status.value] += 1
-            coverage_sum += record.mapping_coverage
-            counted += 1
-
-            ms = event.received_at_ns // 1_000_000
-            timeline[(ms - lo) // bucket_ms][event.source_id] += 1
-
-            if record.ocsf_class:
-                name = CATALOG[record.ocsf_class].name if record.ocsf_class in CATALOG \
-                    else str(record.ocsf_class)
-                by_class[name] += 1
-
-            severity = record.fields.get("severity_id")
-            if isinstance(severity, int):
-                by_severity[severity] += 1
-
-            dst = record.fields.get("dst_endpoint.ip")
-            if dst:
-                talkers[str(dst)] += 1
-
-            title = record.fields.get("finding_info.title")
-            if title and isinstance(severity, int) and severity >= 3:
-                findings.append(
-                    {
-                        "event_uid": str(event.event_uid),
-                        "time": event.received_at_iso,
-                        "source": event.source_id,
-                        "title": str(title),
-                        "severity": severity,
-                        "severity_name": SEVERITY_NAMES.get(severity, "?"),
-                    }
-                )
-
-        sources = [s for s, _ in by_source.most_common()]
-        buckets = sorted(timeline)
-        series = [
-            {
-                "t": lo + b * bucket_ms,
-                "total": sum(timeline[b].values()),
-                **{s: timeline[b].get(s, 0) for s in sources},
-            }
-            for b in buckets
+        by_class = [
+            (CATALOG[k].name if k in CATALOG else str(k), n)
+            for k, n in ocsf.counts_by("class_uid", since_ms=since_ms)
         ]
+        by_severity = [
+            (SEVERITY_NAMES.get(k, str(k)), n)
+            for k, n in ocsf.counts_by("severity_id", since_ms=since_ms)
+        ]
+        status = dict(ocsf.counts_by("parse_status", since_ms=since_ms))
 
         return {
             "range": window,
             "ranges": [*RANGES, "all"],
-            "event_count": len(events),
-            "window_from": lo or None,
-            "window_to": hi or None,
-            "timeline": {"sources": sources, "bucket_ms": bucket_ms, "points": series},
-            "by_source": by_source.most_common(),
-            "by_status": dict(by_status),
-            "by_class": by_class.most_common(),
-            "by_severity": [
-                [SEVERITY_NAMES.get(k, str(k)), v] for k, v in sorted(by_severity.items())
+            "event_count": ocsf.event_count(since_ms=since_ms),
+            "timeline": ocsf.timeline(since_ms=since_ms),
+            "by_source": ocsf.counts_by("source_id", since_ms=since_ms),
+            "by_status": status,
+            "by_class": by_class,
+            "by_severity": by_severity,
+            "top_talkers": ocsf.counts_by("dst_ip", since_ms=since_ms, limit=8),
+            "avg_coverage": ocsf.average_coverage(since_ms=since_ms),
+            "findings": [
+                {
+                    "event_uid": f["event_uid"],
+                    "time": _iso_ms(f["observed_time"]),
+                    "source": f["source_id"],
+                    "title": f["summary"],
+                    "severity": f["severity_id"],
+                    "severity_name": SEVERITY_NAMES.get(f["severity_id"], "?"),
+                }
+                for f in ocsf.findings(since_ms=since_ms)
             ],
-            "top_talkers": talkers.most_common(8),
-            "avg_coverage": round(coverage_sum / counted, 4) if counted else 0.0,
-            "findings": sorted(findings, key=lambda f: -f["severity"])[:12],
         }
+
+    def _quarantine(self, ocsf, proposals) -> dict[str, Any]:
+        summary = ocsf.quarantine_summary()
+        return {
+            **summary,
+            "bar": CONFIDENCE_BAR,
+            "by_source": ocsf.quarantined_sources(),
+            "proposals": proposals.counts(),
+            "recent": [
+                {
+                    "source": p.source_id,
+                    "state": p.state,
+                    "confidence": round(p.confidence, 4),
+                    "decided_by": p.decided_by,
+                    "decided_ns": p.decided_ns,
+                }
+                for p in proposals.history(limit=10)
+            ],
+        }
+
+    def _proposals(self, proposals) -> list[dict[str, Any]]:
+        return [p.as_dict() for p in proposals.pending()]
 
     def _sources(self) -> list[dict[str, Any]]:
         return [
@@ -318,54 +349,39 @@ class ForensicHandler(BaseHTTPRequestHandler):
                 "author": m.author,
                 "content_hash": m.content_hash(),
                 "description": m.description,
-                "path": m.path,
             }
             for m in sorted(self.registry, key=lambda m: m.source)
         ]
 
-    def _events(self, store, query: dict[str, list[str]]) -> list[dict[str, Any]]:
+    def _events(self, ocsf, query) -> list[dict[str, Any]]:
         limit = min(int(query.get("limit", ["300"])[0]), 2000)
-        source = query.get("source", [None])[0] or None
-        status = query.get("status", [None])[0] or None
-        needle = (query.get("q", [""])[0] or "").lower()
+        rows = ocsf.query(
+            source_id=query.get("source", [None])[0] or None,
+            status=query.get("status", [None])[0] or None,
+            search=query.get("q", [""])[0] or None,
+            limit=limit,
+        )
+        return [
+            {
+                "event_uid": r["event_uid"],
+                "source_id": r["source_id"],
+                "received_at": _iso_ms(r["observed_time"]),
+                "parse_status": r["parse_status"],
+                "first_status": r["first_status"],
+                "resolved": r["resolved"],
+                "ocsf_class": r["class_uid"],
+                "class_name": CATALOG[r["class_uid"]].name
+                if r["class_uid"] in CATALOG else None,
+                "severity": r["severity_id"],
+                "rule": r["rule_name"],
+                "coverage": round(r["mapping_coverage"], 3),
+                "warnings": len(r["warnings"]),
+                "summary": r["summary"],
+            }
+            for r in rows
+        ]
 
-        # Newest first at the database, so the limit keeps the most recent
-        # events. Scanning ascending and cutting at the limit would pin the
-        # view to the oldest N and make live capture invisible.
-        out: list[dict[str, Any]] = []
-        for event in store.iter_events(source_id=source, newest_first=True):
-            record = self.normalizer.normalize(event)
-            if status and record.parse_status.value != status:
-                continue
-            summary = _summarise(record)
-            if needle and needle not in (
-                summary + event.source_id + event.text()
-            ).lower():
-                continue
-            out.append(
-                {
-                    "event_uid": str(event.event_uid),
-                    "source_id": event.source_id,
-                    "received_at": event.received_at_iso,
-                    "byte_len": event.byte_len,
-                    "transport": event.transport.value,
-                    "parse_status": record.parse_status.value,
-                    "ocsf_class": record.ocsf_class,
-                    "class_name": CATALOG[record.ocsf_class].name
-                    if record.ocsf_class in CATALOG
-                    else None,
-                    "severity": record.fields.get("severity_id"),
-                    "rule": record.rule_name,
-                    "coverage": round(record.mapping_coverage, 3),
-                    "warnings": len(record.warnings),
-                    "summary": summary,
-                }
-            )
-            if len(out) >= limit:
-                break
-        return out
-
-    def _event(self, store, ledger, uid: str) -> dict[str, Any]:
+    def _event(self, store, ledger, ocsf, uid: str) -> dict[str, Any]:
         try:
             event_uid = uuid.UUID(uid)
         except ValueError:
@@ -375,11 +391,48 @@ class ForensicHandler(BaseHTTPRequestHandler):
         if event is None:
             return {"error": f"no event {uid}"}
 
-        record = self.normalizer.normalize(event)
+        projection = ocsf.get(uid)
+        # Fall back to deriving on the spot for an event ingested before the
+        # projection existed, so no event is ever unviewable.
+        record = None if projection else self.normalizer.normalize(event)
         located = ledger.locate(uid)
         batch = ledger.get_batch(located[0]) if located else None
 
         from ..output import get_adapter
+
+        if projection:
+            normalized = {
+                "parse_status": projection["parse_status"],
+                "first_status": projection["first_status"],
+                "resolved": projection["resolved"],
+                "observed_time": projection["observed_time"],
+                "class_uid": projection["class_uid"],
+                "mapping_id": projection["mapping_id"],
+                "mapping_version": projection["mapping_version"],
+                "rule_name": projection["rule_name"],
+                "mapping_coverage": projection["mapping_coverage"],
+                **projection["fields"],
+            }
+            warnings = projection["warnings"]
+            notes = projection["notes"]
+            exports = {}
+            if record is None and projection["class_uid"]:
+                live = self.normalizer.normalize(event)
+                exports = {
+                    "cef": get_adapter("cef").render(live),
+                    "leef": get_adapter("leef").render(live),
+                }
+        else:
+            normalized = record.to_dict()
+            warnings, notes = record.warnings, record.notes
+            exports = (
+                {
+                    "cef": get_adapter("cef").render(record),
+                    "leef": get_adapter("leef").render(record),
+                }
+                if record.ocsf_class
+                else {}
+            )
 
         return {
             "raw": {
@@ -395,15 +448,10 @@ class ForensicHandler(BaseHTTPRequestHandler):
                 "hex": event.raw_bytes.hex(),
                 "hash_verified": event.verify(),
             },
-            "normalized": record.to_dict(),
-            "warnings": record.warnings,
-            "errors": record.errors,
-            "exports": {
-                "cef": get_adapter("cef").render(record),
-                "leef": get_adapter("leef").render(record),
-            }
-            if record.ocsf_class
-            else {},
+            "normalized": normalized,
+            "warnings": warnings,
+            "notes": notes,
+            "exports": exports,
             "ledger": None
             if batch is None
             else {
@@ -412,7 +460,6 @@ class ForensicHandler(BaseHTTPRequestHandler):
                 "root": batch.root,
                 "prev_root": batch.prev_root,
                 "signed": bool(batch.signature),
-                "mapping_set": batch.mapping_set,
             },
         }
 
@@ -462,30 +509,21 @@ class ForensicHandler(BaseHTTPRequestHandler):
         }
 
 
-def _ui_version() -> str:
-    """Identity of the page currently on disk: mtime and size.
+def _iso_ms(ms: int) -> str:
+    return (
+        datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+        .strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3]
+        + "Z"
+    )
 
-    Cheap enough to compute on every status poll, and changes whenever the
-    file is edited, which is the only thing the client needs to know.
-    """
+
+def _ui_version() -> str:
+    """Identity of the page on disk, so an open tab notices it went stale."""
     try:
         st = STATIC.stat()
         return f"{st.st_mtime_ns}-{st.st_size}"
     except OSError:  # pragma: no cover - defensive
         return "unknown"
-
-
-def _summarise(record) -> str:
-    f = record.fields
-    if title := f.get("finding_info.title"):
-        return str(title)
-    if url := f.get("http_request.url.text"):
-        return f"{f.get('http_request.http_method', '')} {url}".strip()
-    src, dst = f.get("src_endpoint.ip"), f.get("dst_endpoint.ip")
-    if src and dst:
-        port = f.get("dst_endpoint.port")
-        return f"{src} -> {dst}" + (f":{port}" if port else "")
-    return "unparsed - awaiting a mapping"
 
 
 def _make_pipeline_factory(data_dir: Path, registry: MappingRegistry):
@@ -497,11 +535,13 @@ def _make_pipeline_factory(data_dir: Path, registry: MappingRegistry):
             data_dir / "ledger.db",
             batch_key=load_or_create_keypair(data_dir / "keys" / "batch.pem", "batch"),
         )
-        pipeline = Pipeline(store, ledger, registry)
+        ocsf = OCSFStore(data_dir / "ocsf.db")
+        pipeline = Pipeline(store, ledger, registry, ocsf=ocsf)
 
         def closer() -> None:
             store.close()
             ledger.close()
+            ocsf.close()
 
         return pipeline, closer
 
@@ -510,6 +550,7 @@ def _make_pipeline_factory(data_dir: Path, registry: MappingRegistry):
 
 def build_server(
     data_dir: str | Path,
+    sources_dir: str | Path,
     registry: MappingRegistry,
     *,
     host: str = "127.0.0.1",
@@ -521,7 +562,11 @@ def build_server(
         _make_pipeline_factory(data, registry), interval=interval
     )
     handler = partial(
-        ForensicHandler, data_dir=data, registry=registry, collector=collector
+        ForensicHandler,
+        data_dir=data,
+        sources_dir=Path(sources_dir),
+        registry=registry,
+        collector=collector,
     )
     server = ThreadingHTTPServer((host, port), handler)
     server.daemon_threads = True
@@ -531,6 +576,7 @@ def build_server(
 
 def serve(
     data_dir: str | Path,
+    sources_dir: str | Path,
     registry: MappingRegistry,
     *,
     host: str = "127.0.0.1",
@@ -538,10 +584,10 @@ def serve(
     interval: float = 10.0,
 ) -> None:  # pragma: no cover - blocking
     httpd = build_server(
-        data_dir, registry, host=host, port=port, interval=interval
+        data_dir, sources_dir, registry, host=host, port=port, interval=interval
     )
     print(f"AUFLA dashboard on http://{host}:{port}")
-    print("  read-only, except Live Capture (append-only). Ctrl+C to stop.")
+    print("  reads are read-only; writes append events or record decisions.")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
