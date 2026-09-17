@@ -155,7 +155,13 @@ class ForensicHandler(BaseHTTPRequestHandler):
                 self._json(self._sources())
                 return
             if route == "/api/live/status":
-                self._json(self.collector.status.as_dict())
+                # ui_version rides along on the status poll the page already
+                # makes. An open tab never re-fetches its own HTML on its own,
+                # so without this a dashboard left open across an edit keeps
+                # running the old page indefinitely and looks unfixed.
+                self._json(
+                    {**self.collector.status.as_dict(), "ui_version": _ui_version()}
+                )
                 return
 
             with self._db() as (store, ledger):
@@ -428,6 +434,19 @@ class ForensicHandler(BaseHTTPRequestHandler):
             "reason": result.reason,
             "elapsed_ms": round((time.perf_counter() - started) * 1000, 1),
         }
+
+
+def _ui_version() -> str:
+    """Identity of the page currently on disk: mtime and size.
+
+    Cheap enough to compute on every status poll, and changes whenever the
+    file is edited, which is the only thing the client needs to know.
+    """
+    try:
+        st = STATIC.stat()
+        return f"{st.st_mtime_ns}-{st.st_size}"
+    except OSError:  # pragma: no cover - defensive
+        return "unknown"
 
 
 def _summarise(record) -> str:

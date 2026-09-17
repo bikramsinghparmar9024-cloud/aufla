@@ -671,8 +671,19 @@ function updateFollowUi() {
   return streaming;
 }
 
+// The page this tab is running. If the file on disk changes underneath an
+// open tab, reload once rather than keep rendering a stale UI -- a tab left
+// open across an edit otherwise shows old behaviour and reads as unfixed.
+let uiVersion = null;
+
 async function tick(fast) {
   lastStatus = await get("/api/live/status");
+
+  if (lastStatus.ui_version) {
+    if (uiVersion === null) uiVersion = lastStatus.ui_version;
+    else if (uiVersion !== lastStatus.ui_version) { location.reload(); return; }
+  }
+
   renderLive(lastStatus);
   const streaming = updateFollowUi();
   const view = document.querySelector("nav button.on").dataset.v;
@@ -693,6 +704,7 @@ $("#follow").onchange = () => { if (updateFollowUi()) loadEvents(); };
 
 (async () => {
   lastStatus = await get("/api/live/status");
+  uiVersion = lastStatus.ui_version || null;
   renderLive(lastStatus);
   updateFollowUi();
   await loadOverview();
