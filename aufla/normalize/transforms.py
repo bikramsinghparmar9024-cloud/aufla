@@ -186,11 +186,23 @@ SYSLOG_SEVERITY_TO_OCSF = {
     "0": 6, "1": 5, "2": 5, "3": 4, "4": 3, "5": 1, "6": 1, "7": 1,
 }
 
+# Windows Event Log Level -> OCSF severity_id.
+# 1 Critical, 2 Error, 3 Warning, 4 Information, 5 Verbose.
+WINDOWS_LEVEL_TO_OCSF = {"1": 5, "2": 4, "3": 3, "4": 1, "5": 1, "0": 1}
+
+# TCP connection state -> OCSF Network Activity activity_id.
+TCP_STATE_ACTIVITY = {
+    "Established": 6, "Listen": 1, "TimeWait": 2,
+    "CloseWait": 2, "SynSent": 1, "Closed": 2,
+}
+
 LOOKUPS: dict[str, dict[str, Any]] = {
     "suricata_severity": SURICATA_SEVERITY,
     "http_method_activity": HTTP_METHOD_ACTIVITY,
     "firewall_disposition": FIREWALL_DISPOSITION,
     "syslog_severity": SYSLOG_SEVERITY_TO_OCSF,
+    "windows_level": WINDOWS_LEVEL_TO_OCSF,
+    "tcp_state_activity": TCP_STATE_ACTIVITY,
 }
 
 

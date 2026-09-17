@@ -1,0 +1,31 @@
+# Windows Event Log, System and Application channels.
+#
+# The collector takes only Level 1-3 (Critical, Error, Warning). That filter is
+# what keeps this mapping honest: an error or warning raised by the OS is
+# genuinely a finding, so Detection Finding is the right OCSF class for it.
+# Routine informational events are not collected, rather than being forced into
+# a class they do not belong in.
+#
+# The Security channel would give Authentication events (4624/4625), but reading
+# it needs elevation, so it is not collected by default.
+source: windows_eventlog
+format: xml
+ocsf_version: "1.5.0"
+version: 1
+description: Windows Event Log warnings and errors as OCSF Detection Findings.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: event
+    ocsf_class: 2004
+    fields:
+      time: { from: $System.TimeCreated.@SystemTime, transform: iso8601 }
+      finding_info.title: $System.Provider.@Name
+      finding_info.uid: $System.EventID
+      severity_id: { from: $System.Level, lookup: windows_level, default: 1 }
+      activity_id: 1
+      metadata.log_name: $System.Channel
+      metadata.product.name: Windows Event Log
+      metadata.product.vendor_name: Microsoft

@@ -60,7 +60,9 @@ class RefKind(str, Enum):
 
 
 _POSITIONAL_RE = re.compile(r"^\$(\d+)$")
-_NAMED_RE = re.compile(r"^\$([A-Za-z_][A-Za-z0-9_.\-]*)$")
+# `@` is permitted so a mapping can address an XML attribute, which the XML
+# parser exposes as `Parent.@Attr` (e.g. $System.Provider.@Name).
+_NAMED_RE = re.compile(r"^\$([A-Za-z_][A-Za-z0-9_.\-@]*)$")
 
 
 @dataclass(frozen=True, slots=True)

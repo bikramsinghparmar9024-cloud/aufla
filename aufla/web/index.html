@@ -3,229 +3,589 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AUFLA — Forensic Explorer</title>
+<title>AUFLA — Universal Log Pre-processing Framework</title>
 <style>
   :root {
-    --bg:#0e1116; --panel:#161b22; --panel2:#1c232c; --line:#2a323d;
-    --ink:#e6edf3; --dim:#8b98a5; --faint:#5c6773;
-    --accent:#4d9de0; --ok:#3fb950; --warn:#d29922; --bad:#f85149;
+    --page:#0d1117; --surface:#161b22; --surface-2:#1c2230; --line:#262d38;
+    --ink:#e6edf3; --ink-2:#9aa7b4; --muted:#6e7c8c;
+    --grid:#232a35; --axis:#333c49;
+
+    /* Categorical slots, dark steps, validated against this surface (#161b22):
+       lightness band PASS, chroma PASS, CVD adjacent worst dE 8.4 PASS,
+       normal-vision worst dE 19.3 PASS, contrast all >=3:1 PASS.
+       Slots are assigned in fixed order and never cycled; a 9th source folds
+       into "Other" rather than reusing a hue. */
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500;
+    --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+
+    /* Status palette - reserved, never reused as a series colour. */
+    --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+
     --mono:"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
   }
   * { box-sizing:border-box; }
-  body {
-    margin:0; background:var(--bg); color:var(--ink);
-    font:14px/1.5 "Segoe UI",system-ui,sans-serif;
-  }
+  html,body { height:100%; }
+  body { margin:0; background:var(--page); color:var(--ink); font:14px/1.5 var(--sans); }
+
+  /* ---------- shell ---------- */
+  .app { display:grid; grid-template-rows:auto 1fr; height:100%; }
   header {
-    display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;
-    padding:14px 20px; border-bottom:1px solid var(--line); background:var(--panel);
+    display:flex; align-items:center; gap:18px; padding:0 20px; height:58px;
+    background:var(--surface); border-bottom:1px solid var(--line);
   }
-  header h1 { margin:0; font-size:17px; letter-spacing:.3px; }
-  header .tag { color:var(--faint); font-size:12px; }
-  header .spacer { flex:1; }
-  .readonly {
-    font-size:11px; color:var(--dim); border:1px solid var(--line);
-    padding:3px 9px; border-radius:99px;
+  .brand { display:flex; align-items:baseline; gap:10px; }
+  .brand b { font-size:16px; letter-spacing:.2px; }
+  .brand span { color:var(--muted); font-size:11.5px; }
+  nav { display:flex; gap:2px; margin-left:14px; }
+  nav button {
+    background:none; border:0; color:var(--ink-2); padding:8px 14px; border-radius:6px;
+    font:500 13px var(--sans); cursor:pointer;
   }
-  main { padding:20px; max-width:1500px; margin:0 auto; }
+  nav button:hover { background:var(--surface-2); color:var(--ink); }
+  nav button.on { background:var(--surface-2); color:var(--ink); box-shadow:inset 0 -2px 0 var(--s1); }
+  .grow { flex:1; }
 
-  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
-  .tile { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:13px 15px; }
-  .tile .k { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.7px; }
-  .tile .v { font-size:24px; font-weight:600; margin-top:4px; font-variant-numeric:tabular-nums; }
-
-  .bar { display:flex; align-items:center; gap:12px; margin:20px 0 12px; flex-wrap:wrap; }
-  button {
-    background:var(--accent); color:#06121f; border:0; border-radius:6px;
-    padding:8px 15px; font:600 13px/1 inherit; cursor:pointer;
+  .live {
+    display:flex; align-items:center; gap:10px; padding:5px 8px 5px 12px;
+    border:1px solid var(--line); border-radius:8px; background:var(--surface-2);
   }
-  button:hover { filter:brightness(1.1); }
-  button.ghost { background:transparent; color:var(--ink); border:1px solid var(--line); font-weight:500; }
-  select {
-    background:var(--panel2); color:var(--ink); border:1px solid var(--line);
-    border-radius:6px; padding:7px 10px; font:inherit;
-  }
-  #verdict { font-weight:600; font-family:var(--mono); font-size:13px; }
-  .pass { color:var(--ok); } .fail { color:var(--bad); }
+  .live .dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
+  .live.on .dot { background:var(--good); animation:pulse 1.6s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+  .live .lbl { font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums; }
 
-  .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
-  @media (max-width:1100px) { .cols { grid-template-columns:1fr; } }
-
-  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
-  .panel h2 {
-    margin:0; padding:11px 15px; font-size:12px; text-transform:uppercase;
-    letter-spacing:.8px; color:var(--dim); border-bottom:1px solid var(--line);
-    background:var(--panel2);
+  button.act {
+    background:var(--s1); color:#06121f; border:0; border-radius:6px;
+    padding:7px 14px; font:600 12.5px var(--sans); cursor:pointer;
   }
-  .panel .body { max-height:62vh; overflow:auto; }
+  button.act:hover { filter:brightness(1.08); }
+  button.act.stop { background:var(--crit); color:#fff; }
+  button.ghost {
+    background:transparent; color:var(--ink); border:1px solid var(--line);
+    border-radius:6px; padding:7px 13px; font:500 12.5px var(--sans); cursor:pointer;
+  }
+  button.ghost:hover { background:var(--surface-2); }
+
+  main { overflow:auto; padding:20px; }
+  .view { display:none; max-width:1600px; margin:0 auto; }
+  .view.on { display:block; }
+
+  /* ---------- pieces ---------- */
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:12px; }
+  .tile { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .tile .k { color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.8px; }
+  .tile .v { font-size:26px; font-weight:600; margin-top:5px; }
+  .tile .sub { color:var(--ink-2); font-size:11.5px; margin-top:2px; }
+
+  .grid2 { display:grid; grid-template-columns:2fr 1fr; gap:14px; margin-top:14px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:14px; }
+  @media (max-width:1150px){ .grid2,.grid3{ grid-template-columns:1fr; } }
+
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:10px; }
+  .card > h2 {
+    margin:0; padding:12px 16px; font-size:11px; letter-spacing:.9px; color:var(--ink-2);
+    text-transform:uppercase; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:10px;
+  }
+  .card > h2 .note { margin-left:auto; text-transform:none; letter-spacing:0; color:var(--muted); font-size:11px; }
+  .card .pad { padding:14px 16px; }
+
+  .legend { display:flex; flex-wrap:wrap; gap:14px; padding:0 16px 12px; font-size:12px; color:var(--ink-2); }
+  .legend i { width:9px; height:9px; border-radius:2px; display:inline-block; margin-right:6px; }
 
   table { width:100%; border-collapse:collapse; font-size:13px; }
   th {
-    text-align:left; padding:8px 12px; color:var(--dim); font-weight:600;
-    font-size:11px; text-transform:uppercase; letter-spacing:.5px;
-    border-bottom:1px solid var(--line); position:sticky; top:0; background:var(--panel2);
+    text-align:left; padding:9px 14px; color:var(--muted); font-weight:600; font-size:10.5px;
+    letter-spacing:.6px; text-transform:uppercase; border-bottom:1px solid var(--line);
+    position:sticky; top:0; background:var(--surface-2); z-index:1;
   }
-  td { padding:7px 12px; border-bottom:1px solid var(--line); vertical-align:top; }
-  tbody tr { cursor:pointer; }
-  tbody tr:hover { background:var(--panel2); }
-  tbody tr.sel { background:#1d2b3a; }
+  td { padding:8px 14px; border-bottom:1px solid var(--line); }
+  tbody tr:hover { background:var(--surface-2); }
+  tbody tr.sel { background:#1b2a3b; }
+  .clickable tbody tr { cursor:pointer; }
   .mono { font-family:var(--mono); font-size:12px; }
+  .num { font-variant-numeric:tabular-nums; }
+  .scroll { max-height:56vh; overflow:auto; }
 
-  .pill { font-size:11px; padding:2px 8px; border-radius:99px; font-weight:600; }
-  .full { background:#0f3520; color:var(--ok); }
-  .partial { background:#3a2f0b; color:var(--warn); }
-  .quarantined { background:#3d1418; color:var(--bad); }
+  .pill { font-size:10.5px; padding:2px 8px; border-radius:99px; font-weight:600; white-space:nowrap; }
+  .full { background:#0d2f1a; color:#4ec96e; }
+  .partial { background:#33290a; color:var(--warn); }
+  .quarantined { background:#3a1416; color:#f2706e; }
+  .sev { font-size:10.5px; padding:2px 7px; border-radius:4px; font-weight:600; }
 
-  .kv { display:grid; grid-template-columns:150px 1fr; gap:5px 14px; padding:14px 15px; font-size:13px; }
-  .kv dt { color:var(--dim); }
-  .kv dd { margin:0; font-family:var(--mono); font-size:12px; word-break:break-all; }
+  .kv { display:grid; grid-template-columns:150px 1fr; gap:6px 14px; }
+  .kv dt { color:var(--muted); font-size:12px; }
+  .kv dd { margin:0; font-family:var(--mono); font-size:11.5px; word-break:break-all; }
 
   pre {
-    margin:0; padding:13px 15px; background:#0a0d12; color:#bcd;
-    font-family:var(--mono); font-size:12px; white-space:pre-wrap;
-    word-break:break-all; border-top:1px solid var(--line);
+    margin:0; padding:12px 14px; background:#0a0e14; color:#b9cde0; border:1px solid var(--line);
+    border-radius:8px; font-family:var(--mono); font-size:11.5px; white-space:pre-wrap; word-break:break-all;
+    max-height:220px; overflow:auto;
   }
-  .sub {
-    padding:9px 15px; font-size:11px; color:var(--dim);
-    text-transform:uppercase; letter-spacing:.6px; border-top:1px solid var(--line);
-    background:var(--panel2);
+  .lbl { color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.7px; margin:14px 0 6px; }
+  .empty { padding:30px 16px; color:var(--muted); text-align:center; font-size:13px; }
+  .bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+  input[type=search], select {
+    background:var(--surface-2); color:var(--ink); border:1px solid var(--line);
+    border-radius:6px; padding:7px 10px; font:13px var(--sans);
   }
-  .warn-item { color:var(--warn); padding:5px 15px; font-size:12px; }
-  .empty { padding:26px 15px; color:var(--faint); text-align:center; }
+  input[type=search] { min-width:230px; }
+  .verdict { font:600 12.5px var(--mono); }
+  .ok { color:var(--good); } .bad { color:var(--crit); }
+  .chain { display:flex; flex-direction:column; gap:0; }
+  .link { display:flex; align-items:center; gap:10px; padding:7px 0; }
+  .link .node {
+    width:9px; height:9px; border-radius:50%; background:var(--s3); flex:none;
+    box-shadow:0 0 0 3px rgba(25,158,112,.16);
+  }
+  .link .rope { width:2px; height:14px; background:var(--axis); margin-left:3.5px; }
 </style>
 </head>
 <body>
+<div class="app">
 
 <header>
-  <h1>AUFLA · Forensic Explorer</h1>
-  <span class="tag">Universal Log Pre-processing Framework — SIH 2026 · PS 26156</span>
-  <span class="spacer"></span>
-  <span class="readonly">read-only · air-gapped · no external assets</span>
+  <div class="brand">
+    <b>AUFLA</b>
+    <span>Universal Log Pre-processing Framework · SIH 2026 · PS 26156 · NTRO/NCIIPC</span>
+  </div>
+  <nav>
+    <button data-v="overview" class="on">Overview</button>
+    <button data-v="events">Events</button>
+    <button data-v="sources">Sources</button>
+    <button data-v="integrity">Integrity</button>
+  </nav>
+  <div class="grow"></div>
+  <div class="live" id="livebox">
+    <span class="dot"></span>
+    <span class="lbl" id="livelbl">Live capture off</span>
+    <button class="act" id="livebtn">Start live capture</button>
+  </div>
 </header>
 
 <main>
-  <section class="tiles" id="tiles"></section>
+  <!-- OVERVIEW -->
+  <section class="view on" id="v-overview">
+    <div class="tiles" id="tiles"></div>
 
-  <div class="bar">
-    <button id="verify">Verify chain</button>
-    <span id="verdict">—</span>
-    <span class="spacer" style="flex:1"></span>
-    <select id="source"><option value="">all sources</option></select>
-    <button class="ghost" id="reload">Reload</button>
-  </div>
-
-  <div class="cols">
-    <div class="panel">
-      <h2>Events</h2>
-      <div class="body">
-        <table>
-          <thead><tr>
-            <th>Received</th><th>Source</th><th>Summary</th><th>Status</th>
-          </tr></thead>
-          <tbody id="rows"></tbody>
-        </table>
+    <div class="grid2">
+      <div class="card">
+        <h2>Events ingested over time <span class="note" id="tl-note"></span></h2>
+        <div id="timeline"></div>
+        <div class="legend" id="tl-legend"></div>
+      </div>
+      <div class="card">
+        <h2>Normalisation outcome</h2>
+        <div class="pad" id="status-chart"></div>
       </div>
     </div>
 
-    <div class="panel">
-      <h2>Original bytes &amp; normalised record</h2>
-      <div class="body" id="detail">
-        <div class="empty">Select an event to see the exact bytes that arrived.</div>
+    <div class="grid3">
+      <div class="card">
+        <h2>Events by source</h2>
+        <div class="pad" id="source-chart"></div>
+      </div>
+      <div class="card">
+        <h2>OCSF class distribution</h2>
+        <div class="pad" id="class-chart"></div>
+      </div>
+      <div class="card">
+        <h2>Top destinations</h2>
+        <div class="pad" id="talker-chart"></div>
       </div>
     </div>
-  </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Findings requiring attention <span class="note">severity Medium and above</span></h2>
+      <table class="clickable" id="findings-tbl">
+        <thead><tr><th>Time</th><th>Source</th><th>Finding</th><th>Severity</th></tr></thead>
+        <tbody id="findings"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- EVENTS -->
+  <section class="view" id="v-events">
+    <div class="bar">
+      <input type="search" id="q" placeholder="Search summary, source or raw text...">
+      <select id="f-source"><option value="">All sources</option></select>
+      <select id="f-status">
+        <option value="">All outcomes</option>
+        <option value="full">Full</option>
+        <option value="partial">Partial</option>
+        <option value="quarantined">Quarantined</option>
+      </select>
+      <button class="ghost" id="ev-reload">Refresh</button>
+      <span class="grow"></span>
+      <span class="lbl" id="ev-count" style="margin:0"></span>
+    </div>
+    <div class="grid2" style="margin-top:0">
+      <div class="card">
+        <h2>Events</h2>
+        <div class="scroll">
+          <table class="clickable">
+            <thead><tr><th>Received</th><th>Source</th><th>Summary</th><th>Class</th><th>Outcome</th></tr></thead>
+            <tbody id="ev-rows"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Original bytes and derived record</h2>
+        <div class="pad" id="detail">
+          <div class="empty">Select an event.<br>The raw bytes are the permanent record; the OCSF form is derived from them.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOURCES -->
+  <section class="view" id="v-sources">
+    <div class="card">
+      <h2>Onboarded sources <span class="note">YAML mappings, hot-reloaded from sources/</span></h2>
+      <table>
+        <thead><tr><th>Source</th><th>Format</th><th>OCSF classes</th><th>Rules</th><th>Ver</th><th>Approved by</th><th>Content hash</th></tr></thead>
+        <tbody id="src-rows"></tbody>
+      </table>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h2>How a source gets onboarded</h2>
+      <div class="pad" style="color:var(--ink-2); font-size:13px; max-width:900px">
+        <p style="margin-top:0">A mapping is a YAML file. Drop one into <code class="mono">sources/</code> and the next event from that source normalises — no restart, no code change, no redeploy.</p>
+        <p><b style="color:var(--ink)">The same file is what the AI lane produces.</b> For a format nobody recognises, Drain3 mines the template and a grammar-constrained local model proposes a mapping; deterministic checks score it and an analyst approves it. Human and machine author the identical artifact, so every automated decision stays reviewable, diffable and version-controlled.</p>
+        <p style="margin-bottom:0">Unknown OCSF targets, unknown classes, duplicate rule names and shadowing catch-all rules are all rejected at load — whoever wrote the file.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTEGRITY -->
+  <section class="view" id="v-integrity">
+    <div class="bar">
+      <button class="act" id="verifybtn">Verify chain</button>
+      <span class="verdict" id="verdict">not yet run</span>
+      <span class="grow"></span>
+      <span class="lbl" style="margin:0" id="vtime"></span>
+    </div>
+    <div class="grid2" style="margin-top:0">
+      <div class="card">
+        <h2>Merkle chain <span class="note" id="chain-note"></span></h2>
+        <div class="scroll pad" id="chain"></div>
+      </div>
+      <div>
+        <div class="card">
+          <h2>Offline checkpoints</h2>
+          <div class="pad" id="checkpoints"></div>
+        </div>
+        <div class="card" style="margin-top:14px">
+          <h2>What the chain seals</h2>
+          <div class="pad" style="color:var(--ink-2); font-size:13px">
+            <p style="margin-top:0"><b style="color:var(--ink)">The raw stream.</b> The OCSF projection is rebuildable and therefore mutable by design, so it is not the evidence — the original bytes are.</p>
+            <p>Each batch commits the hashes of the mappings in force, so for any normalised row you can prove which raw event produced it, under which mapping version, and that neither has changed.</p>
+            <p style="margin-bottom:0">Batch roots are signed with an online key; a daily checkpoint is signed with an offline key, bounding forgery to a single day if the online key is stolen.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
+</div>
 
 <script>
 const $ = s => document.querySelector(s);
-const esc = s => String(s ?? "").replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const get = async p => (await fetch(p)).json();
+const post = async p => (await fetch(p, {method:"POST"})).json();
+const SERIES = ["--s1","--s2","--s3","--s4","--s5","--s6","--s7","--s8"];
+// Past the last validated slot, fold into a neutral "Other" band rather than
+// inventing a hue - a generated colour has no CVD guarantee.
+const slot = i => i < SERIES.length ? cssv(SERIES[i]) : cssv("--muted");
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const SEV_COLOR = {Critical:"--crit",Fatal:"--crit",High:"--serious",Medium:"--warn",Low:"--s3",Informational:"--s1",Unknown:"--muted"};
 
-let selected = null;
+let selected = null, evCache = [];
 
-async function loadStats() {
-  const s = await get("/api/stats");
+/* ---------------- charts (inline SVG, no library) ---------------- */
+
+function svg(w, h, body, extra="") {
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" ${extra}
+           style="display:block;overflow:visible">${body}</svg>`;
+}
+
+// Stacked area over time. One band per source, colours in fixed slot order.
+function timelineChart(el, tl) {
+  const pts = tl.points, srcs = tl.sources;
+  if (!pts.length) { el.innerHTML = `<div class="empty">No events yet.</div>`; return; }
+
+  const W = 900, H = 230, P = {t:14, r:14, b:26, l:44};
+  const iw = W - P.l - P.r, ih = H - P.t - P.b;
+  const max = Math.max(1, ...pts.map(p => p.total));
+  const x = i => P.l + (pts.length === 1 ? iw/2 : (i / (pts.length - 1)) * iw);
+  const y = v => P.t + ih - (v / max) * ih;
+
+  // gridlines + y ticks
+  let g = "";
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const v = Math.round(max * i / ticks), yy = y(v);
+    g += `<line x1="${P.l}" x2="${W-P.r}" y1="${yy}" y2="${yy}" stroke="${cssv("--grid")}" stroke-width="1"/>`;
+    g += `<text x="${P.l-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="${cssv("--muted")}">${v}</text>`;
+  }
+
+  // stacked bands, drawn top-down so each sits on the running total
+  let running = pts.map(() => 0), bands = "";
+  srcs.forEach((s, si) => {
+    const color = slot(si);
+    const top = [], bottom = [];
+    pts.forEach((p, i) => {
+      const base = running[i], v = p[s] || 0;
+      bottom.push([x(i), y(base)]);
+      top.push([x(i), y(base + v)]);
+      running[i] = base + v;
+    });
+    const path = "M" + top.map(p => p.join(",")).join("L")
+               + "L" + bottom.reverse().map(p => p.join(",")).join("L") + "Z";
+    // 2px surface gap between stacked segments
+    bands += `<path d="${path}" fill="${color}" fill-opacity="0.82"
+                stroke="${cssv("--surface")}" stroke-width="2" stroke-linejoin="round"/>`;
+  });
+
+  // x labels: first and last only, so nothing collides
+  const fmt = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  const xl = `<text x="${P.l}" y="${H-8}" font-size="10" fill="${cssv("--muted")}">${fmt(pts[0].t)}</text>
+              <text x="${W-P.r}" y="${H-8}" text-anchor="end" font-size="10" fill="${cssv("--muted")}">${fmt(pts[pts.length-1].t)}</text>`;
+
+  // hover layer: one invisible column per bucket
+  let hot = "";
+  pts.forEach((p, i) => {
+    const bw = iw / Math.max(pts.length, 1);
+    const parts = srcs.filter(s => p[s]).map(s => `${s}: ${p[s]}`).join(" · ");
+    hot += `<rect x="${x(i)-bw/2}" y="${P.t}" width="${bw}" height="${ih}" fill="transparent">
+              <title>${esc(fmt(p.t))}\n${esc(parts || "no events")}\ntotal: ${p.total}</title></rect>`;
+  });
+
+  el.innerHTML = svg(W, H, g + bands + xl + hot, `style="display:block"`);
+  $("#tl-legend").innerHTML = srcs.map((s, i) =>
+    `<span><i style="background:${slot(i)}"></i>${esc(s)}</span>`).join("");
+  $("#tl-note").textContent = `${(tl.bucket_ms/1000).toFixed(0)}s buckets`;
+}
+
+// Horizontal bars with direct labels - no legend needed, labels carry identity.
+function barList(el, rows, opt = {}) {
+  if (!rows.length) { el.innerHTML = `<div class="empty">No data.</div>`; return; }
+  const max = Math.max(...rows.map(r => r[1]));
+  el.innerHTML = rows.map((r, i) => {
+    const color = opt.color ? cssv(opt.color(r[0], i)) : slot(i);
+    const pct = (r[1] / max) * 100;
+    return `<div style="margin:9px 0">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:var(--ink)">${esc(r[0])}</span>
+        <span class="num" style="color:var(--ink-2)">${r[1].toLocaleString()}</span>
+      </div>
+      <div style="height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden">
+        <div style="width:${pct}%;height:100%;background:${color};border-radius:4px"></div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ---------------- views ---------------- */
+
+async function loadOverview() {
+  const [s, o] = await Promise.all([get("/api/stats"), get("/api/overview")]);
+
   $("#tiles").innerHTML = [
-    ["raw events", s.raw_events],
-    ["sealed", s.sealed_events],
-    ["batches", s.batches],
-    ["checkpoints", s.checkpoints],
-    ["mappings", s.mappings],
-  ].map(([k, v]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div></div>`).join("")
-    + `<div class="tile"><div class="k">chain head</div>
-       <div class="v mono" style="font-size:13px;word-break:break-all">${esc(s.chain_head.slice(0, 24))}…</div></div>`;
+    ["Raw events", s.raw_events.toLocaleString(), "byte-exact, immutable"],
+    ["Sealed", s.sealed_events.toLocaleString(), `${s.batches} Merkle batches`],
+    ["Normalised", `${(o.avg_coverage*100).toFixed(0)}%`, "mean field coverage"],
+    ["Sources", String(s.mappings), "hot-reloaded mappings"],
+    ["Checkpoints", String(s.checkpoints), "offline-signed"],
+    ["Chain head", s.chain_head.slice(0,10)+"…", "SHA-256"],
+  ].map(([k,v,sub]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="sub">${sub}</div></div>`).join("");
 
-  const sel = $("#source"), keep = sel.value;
-  sel.innerHTML = `<option value="">all sources</option>` +
-    Object.entries(s.by_source).map(([k, n]) => `<option value="${esc(k)}">${esc(k)} (${n})</option>`).join("");
-  sel.value = keep;
+  timelineChart($("#timeline"), o.timeline);
+
+  const st = o.by_status;
+  barList($("#status-chart"),
+    [["Full","full"],["Partial","partial"],["Quarantined","quarantined"]]
+      .filter(([,k]) => st[k]).map(([l,k]) => [l, st[k]]),
+    {color: l => ({Full:"--good", Partial:"--warn", Quarantined:"--crit"})[l]});
+
+  barList($("#source-chart"), o.by_source);
+  barList($("#class-chart"), o.by_class);
+  barList($("#talker-chart"), o.top_talkers, {color:()=> "--s1"});
+
+  $("#findings").innerHTML = o.findings.length ? o.findings.map(f => `
+    <tr data-uid="${f.event_uid}">
+      <td class="mono">${esc(f.time.slice(11,19))}</td>
+      <td>${esc(f.source)}</td>
+      <td>${esc(f.title)}</td>
+      <td><span class="sev" style="background:${cssv(SEV_COLOR[f.severity_name]||"--muted")}22;color:${cssv(SEV_COLOR[f.severity_name]||"--muted")}">${esc(f.severity_name)}</span></td>
+    </tr>`).join("")
+    : `<tr><td colspan="4" class="empty">No findings at Medium or above.</td></tr>`;
+
+  document.querySelectorAll("#findings tr[data-uid]").forEach(tr =>
+    tr.onclick = () => { show("events"); loadEvents().then(() => showEvent(tr.dataset.uid)); });
 }
 
 async function loadEvents() {
-  const src = $("#source").value;
-  const rows = await get("/api/events?limit=300" + (src ? "&source=" + encodeURIComponent(src) : ""));
-  $("#rows").innerHTML = rows.length ? rows.map(r => `
-    <tr data-uid="${r.event_uid}" class="${r.event_uid === selected ? "sel" : ""}">
-      <td class="mono">${esc(r.received_at.slice(11, 23))}</td>
+  const qs = new URLSearchParams();
+  if ($("#q").value) qs.set("q", $("#q").value);
+  if ($("#f-source").value) qs.set("source", $("#f-source").value);
+  if ($("#f-status").value) qs.set("status", $("#f-status").value);
+  evCache = await get("/api/events?" + qs.toString());
+
+  $("#ev-count").textContent = `${evCache.length} event${evCache.length===1?"":"s"}`;
+  $("#ev-rows").innerHTML = evCache.length ? evCache.map(r => `
+    <tr data-uid="${r.event_uid}" class="${r.event_uid===selected?"sel":""}">
+      <td class="mono">${esc(r.received_at.slice(11,19))}</td>
       <td>${esc(r.source_id)}</td>
       <td>${esc(r.summary)}</td>
+      <td style="color:var(--ink-2);font-size:12px">${esc(r.class_name||"—")}</td>
       <td><span class="pill ${r.parse_status}">${r.parse_status}</span></td>
     </tr>`).join("")
-    : `<tr><td colspan="4" class="empty">No events. Ingest a file first.</td></tr>`;
+    : `<tr><td colspan="5" class="empty">No events match.</td></tr>`;
 
-  document.querySelectorAll("#rows tr[data-uid]").forEach(tr =>
+  document.querySelectorAll("#ev-rows tr[data-uid]").forEach(tr =>
     tr.onclick = () => showEvent(tr.dataset.uid));
+
+  const sel = $("#f-source"), keep = sel.value;
+  const srcs = [...new Set(evCache.map(e => e.source_id))].sort();
+  if (sel.options.length <= 1 || keep === "") {
+    sel.innerHTML = `<option value="">All sources</option>` +
+      srcs.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+    sel.value = keep;
+  }
 }
 
 async function showEvent(uid) {
   selected = uid;
-  document.querySelectorAll("#rows tr").forEach(tr =>
-    tr.classList.toggle("sel", tr.dataset.uid === uid));
-
+  document.querySelectorAll("#ev-rows tr").forEach(tr => tr.classList.toggle("sel", tr.dataset.uid===uid));
   const d = await get("/api/event/" + uid);
   if (d.error) { $("#detail").innerHTML = `<div class="empty">${esc(d.error)}</div>`; return; }
 
-  const fields = Object.entries(d.normalized)
-    .filter(([k]) => !["event_uid", "raw_hash", "source_id", "mapping_hash"].includes(k))
-    .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(typeof v === "object" ? JSON.stringify(v) : v)}</dd>`)
-    .join("");
-
-  const hexRows = (d.raw.hex.match(/.{1,32}/g) || []).slice(0, 12)
-    .map(h => h.match(/.{1,2}/g).join(" ")).join("\n");
+  const hex = (d.raw.hex.match(/.{1,32}/g)||[]).slice(0,8).map(h => h.match(/.{1,2}/g).join(" ")).join("\n");
+  const skip = ["event_uid","raw_hash","source_id","mapping_hash"];
+  const fields = Object.entries(d.normalized).filter(([k]) => !skip.includes(k))
+    .map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(typeof v==="object"?JSON.stringify(v):v)}</dd>`).join("");
 
   $("#detail").innerHTML = `
-    <div class="sub">Original bytes — exactly as received${d.raw.hash_verified ? ", hash verified" : ", HASH MISMATCH"}</div>
+    <div class="lbl">Original bytes — exactly as received${d.raw.hash_verified?", hash verified":", HASH MISMATCH"}</div>
     <pre>${esc(d.raw.text)}</pre>
-    <div class="sub">Hex (first 384 bytes)</div>
-    <pre>${esc(hexRows)}</pre>
-    <div class="sub">Lineage</div>
+    <div class="lbl">Hex</div><pre>${esc(hex)}</pre>
+    <div class="lbl">Lineage</div>
     <dl class="kv">
       <dt>event_uid</dt><dd>${esc(d.raw.event_uid)}</dd>
       <dt>raw_hash</dt><dd>${esc(d.raw.raw_hash)}</dd>
-      <dt>received_at</dt><dd>${esc(d.raw.received_at)}</dd>
-      <dt>transport</dt><dd>${esc(d.raw.transport)}${d.raw.truncated ? " (truncated)" : ""}</dd>
-      ${d.ledger ? `
-      <dt>batch</dt><dd>#${d.ledger.batch_id}, leaf ${d.ledger.leaf_index}${d.ledger.signed ? ", signed" : ""}</dd>
-      <dt>merkle root</dt><dd>${esc(d.ledger.root)}</dd>` : `<dt>batch</dt><dd>not yet sealed</dd>`}
+      <dt>received</dt><dd>${esc(d.raw.received_at)}</dd>
+      ${d.ledger?`<dt>sealed in</dt><dd>batch #${d.ledger.batch_id}, leaf ${d.ledger.leaf_index}${d.ledger.signed?", signed":""}</dd>
+      <dt>merkle root</dt><dd>${esc(d.ledger.root)}</dd>`:`<dt>sealed in</dt><dd>not yet sealed</dd>`}
     </dl>
-    <div class="sub">Normalised OCSF projection (derived — rebuildable from the bytes above)</div>
+    <div class="lbl">Derived OCSF record — rebuildable from the bytes above</div>
     <dl class="kv">${fields}</dl>
-    ${d.warnings.length ? `<div class="sub">Warnings</div>` +
-      d.warnings.map(w => `<div class="warn-item">• ${esc(w)}</div>`).join("") : ""}`;
+    ${d.exports?.cef?`<div class="lbl">Downstream export (CEF — lineage travels with it)</div><pre>${esc(d.exports.cef)}</pre>`:""}
+    ${d.warnings.length?`<div class="lbl">Warnings</div>`+d.warnings.map(w=>`<div style="color:var(--warn);font-size:12px;padding:3px 0">• ${esc(w)}</div>`).join(""):""}`;
 }
 
-$("#verify").onclick = async () => {
-  $("#verdict").textContent = "checking…";
-  $("#verdict").className = "";
-  const r = await get("/api/verify");
-  $("#verdict").textContent = r.text;
-  $("#verdict").className = r.ok ? "pass" : "fail";
+async function loadSources() {
+  const rows = await get("/api/sources");
+  $("#src-rows").innerHTML = rows.map(m => `
+    <tr>
+      <td><b>${esc(m.source)}</b><div style="color:var(--muted);font-size:11.5px">${esc(m.description)}</div></td>
+      <td class="mono">${esc(m.format)}</td>
+      <td style="font-size:12px">${m.ocsf_classes.map(c=>`${c.uid} ${esc(c.name)}`).join("<br>")}</td>
+      <td class="mono">${m.rules.map(esc).join(", ")}</td>
+      <td class="num">v${m.version}</td>
+      <td>${m.approved_by?`<span class="pill full">${esc(m.approved_by)}</span>`:`<span class="pill quarantined">unapproved</span>`}</td>
+      <td class="mono" style="color:var(--muted)">${esc(m.content_hash.slice(0,16))}…</td>
+    </tr>`).join("");
+}
+
+async function loadIntegrity() {
+  const d = await get("/api/integrity");
+  $("#chain-note").textContent = `${d.batch_total} batches`;
+  $("#chain").innerHTML = `<div class="chain">` + d.batches.map((b,i) => `
+    ${i?`<div class="rope"></div>`:""}
+    <div class="link">
+      <span class="node"></span>
+      <div style="flex:1">
+        <div style="font-size:12.5px">Batch #${b.batch_id} · <span class="num">${b.leaf_count}</span> events · ${b.signed?"signed":"unsigned"}</div>
+        <div class="mono" style="color:var(--muted);font-size:11px">${esc(b.root.slice(0,48))}…</div>
+      </div>
+      <div class="mono" style="color:var(--muted);font-size:11px">${esc(b.sealed_at.slice(11,19))}</div>
+    </div>`).join("") + `</div>`;
+
+  $("#checkpoints").innerHTML = d.checkpoints.length ? d.checkpoints.map(c => `
+    <div style="padding:8px 0;border-bottom:1px solid var(--line)">
+      <div style="font-size:13px">${esc(c.day)} · batches ${c.first_batch}–${c.last_batch} · <span class="num">${c.event_count}</span> events</div>
+      <div class="mono" style="color:var(--muted);font-size:11px">head ${esc(c.chain_head.slice(0,40))}…</div>
+    </div>`).join("")
+    : `<div class="empty">No checkpoints yet. Run <code class="mono">ulpf checkpoint --day YYYY-MM-DD</code>.</div>`;
+}
+
+/* ---------------- live capture ---------------- */
+
+function renderLive(s) {
+  const box = $("#livebox"), btn = $("#livebtn");
+  box.classList.toggle("on", s.running);
+  btn.textContent = s.running ? "Stop" : "Start live capture";
+  btn.classList.toggle("stop", s.running);
+  if (s.running) {
+    const n = Object.values(s.by_source||{}).reduce((a,b)=>a+b,0);
+    $("#livelbl").innerHTML = `capturing this host · <b>${n}</b> events · ${s.ticks} polls`
+      + (s.last_error?` · <span style="color:var(--crit)">${esc(s.last_error)}</span>`:"");
+  } else {
+    $("#livelbl").textContent = "Live capture off";
+  }
+}
+
+$("#livebtn").onclick = async () => {
+  const btn = $("#livebtn");
+  const wasRunning = btn.classList.contains("stop");
+  btn.disabled = true;
+  btn.textContent = wasRunning ? "Stopping…" : "Starting…";
+  renderLive(await post(wasRunning ? "/api/live/stop" : "/api/live/start"));
+  btn.disabled = false;
+  setTimeout(refresh, 1200);
 };
 
-$("#source").onchange = loadEvents;
-$("#reload").onclick = async () => { await loadStats(); await loadEvents(); };
+/* ---------------- shell ---------------- */
 
-(async () => { await loadStats(); await loadEvents(); })();
+function show(v) {
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.v===v));
+  document.querySelectorAll(".view").forEach(s => s.classList.toggle("on", s.id==="v-"+v));
+  ({overview:loadOverview, events:loadEvents, sources:loadSources, integrity:loadIntegrity})[v]();
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.v));
+
+$("#verifybtn").onclick = async () => {
+  $("#verdict").textContent = "checking…"; $("#verdict").className = "verdict";
+  const r = await get("/api/verify");
+  $("#verdict").textContent = r.text;
+  $("#verdict").className = "verdict " + (r.ok ? "ok" : "bad");
+  $("#vtime").textContent = `${r.events_checked} events re-hashed in ${r.elapsed_ms} ms`;
+  loadIntegrity();
+};
+
+$("#ev-reload").onclick = loadEvents;
+$("#f-source").onchange = loadEvents;
+$("#f-status").onchange = loadEvents;
+let typing; $("#q").oninput = () => { clearTimeout(typing); typing = setTimeout(loadEvents, 250); };
+
+async function refresh() {
+  const active = document.querySelector("nav button.on").dataset.v;
+  if (active === "overview") await loadOverview();
+  else if (active === "events") await loadEvents();
+  else if (active === "integrity") await loadIntegrity();
+}
+
+// Poll live status; refresh the active view while capture is running.
+setInterval(async () => {
+  const s = await get("/api/live/status");
+  renderLive(s);
+  if (s.running) refresh();
+}, 5000);
+
+(async () => { renderLive(await get("/api/live/status")); await loadOverview(); })();
 </script>
 </body>
 </html>

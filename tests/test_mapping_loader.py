@@ -169,6 +169,8 @@ def test_the_bundled_source_mappings_all_load():
         "pfsense_filterlog",
         "suricata_eve",
         "squid_access",
+        "windows_netconn",
+        "windows_eventlog",
     }
 
 

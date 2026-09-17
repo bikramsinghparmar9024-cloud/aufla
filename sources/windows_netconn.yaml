@@ -1,0 +1,34 @@
+# Live TCP connections from the local Windows host.
+#
+# Emitted by `ulpf live` via Get-NetTCPConnection. This maps onto OCSF Network
+# Activity exactly -- a TCP connection genuinely is network activity, so nothing
+# here is a semantic stretch.
+#
+# Columns:
+#   1 epoch_ms  2 local_addr  3 local_port  4 remote_addr  5 remote_port
+#   6 state     7 process     8 pid
+source: windows_netconn
+format: csv
+ocsf_version: "1.5.0"
+version: 1
+description: Live TCP connections observed on the local host.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: connection
+    ocsf_class: 4001
+    fields:
+      time: { from: $1, transform: epoch_millis }
+      src_endpoint.ip: $2
+      src_endpoint.port: $3
+      dst_endpoint.ip: $4
+      dst_endpoint.port: $5
+      activity_id: { from: $6, lookup: tcp_state_activity, default: 0 }
+      connection_info.protocol_num: 6
+      severity_id: 1
+      disposition_id: 1
+      metadata.product.name: Windows
+      metadata.product.vendor_name: Microsoft
+      metadata.log_name: Get-NetTCPConnection

@@ -181,18 +181,18 @@ def cmd_checkpoint(args) -> int:
 def cmd_serve(args) -> int:
     from .web import serve
 
-    # Open once so the databases and keys exist, then hand the server paths:
-    # it opens per-request connections on its own threads.
+    # Open once so the databases and keys exist, then hand the server the data
+    # directory: it opens per-request connections on its own threads.
     store, ledger, registry = _open(args.data, args.sources)
     store.close()
     ledger.close()
 
     serve(
-        args.data / "raw.db",
-        args.data / "ledger.db",
+        args.data,
         registry,
         host=args.host,
         port=args.port,
+        interval=args.interval,
     )
     return 0
 
@@ -267,9 +267,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--day", required=True)
     p.set_defaults(func=cmd_checkpoint)
 
-    p = sub.add_parser("serve", help="run the read-only Forensic Explorer UI")
+    p = sub.add_parser("serve", help="run the dashboard")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8000)
+    p.add_argument(
+        "--interval",
+        type=float,
+        default=10.0,
+        help="seconds between live-capture polls (default: 10)",
+    )
     p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser("stats", help="show store and ledger counters")
