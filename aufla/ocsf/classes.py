@@ -164,6 +164,9 @@ HTTP_ACTIVITY = _build(
         _f("duration", FieldType.LONG, False, "Duration in milliseconds"),
         _f("traffic.bytes", FieldType.LONG, False, "Total bytes"),
         _f("disposition_id", FieldType.INTEGER, False, "Allowed, blocked, etc."),
+        # A request identifies the account that made it.
+        _f("user.name", FieldType.STRING, False, "Account name"),
+        _f("user.uid", FieldType.STRING, False, "Account identifier"),
     ),
 )
 
@@ -197,6 +200,11 @@ DETECTION_FINDING = _build(
         _f("confidence_id", FieldType.INTEGER, False, "Detection confidence"),
         _f("impact_id", FieldType.INTEGER, False, "Impact"),
         _f("malware.name", FieldType.STRING, False, "Malware name"),
+        # A finding identifies the account it concerns.
+        _f("user.name", FieldType.STRING, False, "Account name"),
+        _f("user.uid", FieldType.STRING, False, "Account identifier"),
+        _f("user.domain", FieldType.STRING, False, "Account domain"),
+        _f("user.email_addr", FieldType.EMAIL, False, "Account email"),
     ),
 )
 

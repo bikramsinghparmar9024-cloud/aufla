@@ -1,0 +1,150 @@
+Sep 17 12:52:37 mail postfix/qmgr[7704]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam0@bad.test>: Relay access denied; from=<spam0@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:52:44 mail postfix/smtpd[1226]: 6C77B2: to=<user1@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=2.76, status=sent (250 2.0.0 OK)
+Sep 17 12:52:51 mail postfix/smtp[7830]: 59B0E8: to=<user2@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=1.71, status=sent (250 2.0.0 OK)
+Sep 17 12:52:58 mail postfix/smtpd[6789]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam3@bad.test>: Relay access denied; from=<spam3@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:53:05 mail postfix/qmgr[8365]: 8F8B57: to=<user4@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=3.41, status=sent (250 2.0.0 OK)
+Sep 17 12:53:12 mail postfix/qmgr[2675]: 32258B: to=<user5@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=2.79, status=sent (250 2.0.0 OK)
+Sep 17 12:53:19 mail postfix/smtpd[6926]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam6@bad.test>: Relay access denied; from=<spam6@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:53:26 mail postfix/smtp[7287]: 982D11: to=<user7@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=4.71, status=sent (250 2.0.0 OK)
+Sep 17 12:53:33 mail postfix/qmgr[6916]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam8@bad.test>: Relay access denied; from=<spam8@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:53:40 mail postfix/smtp[8901]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam9@bad.test>: Relay access denied; from=<spam9@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:53:47 mail postfix/qmgr[4342]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam10@bad.test>: Relay access denied; from=<spam10@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:53:54 mail postfix/qmgr[4846]: 3D14F3: to=<user11@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=2.36, status=sent (250 2.0.0 OK)
+Sep 17 12:54:01 mail postfix/smtp[2201]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam12@bad.test>: Relay access denied; from=<spam12@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:54:08 mail postfix/qmgr[6573]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam13@bad.test>: Relay access denied; from=<spam13@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:54:15 mail postfix/smtpd[7984]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam14@bad.test>: Relay access denied; from=<spam14@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:54:22 mail postfix/qmgr[3013]: 4C355E: to=<user15@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=1.69, status=sent (250 2.0.0 OK)
+Sep 17 12:54:29 mail postfix/qmgr[1807]: 7444D3: to=<user16@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=0.19, status=sent (250 2.0.0 OK)
+Sep 17 12:54:36 mail postfix/qmgr[9255]: 134DE3: to=<user17@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=0.99, status=sent (250 2.0.0 OK)
+Sep 17 12:54:43 mail postfix/qmgr[8821]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam18@bad.test>: Relay access denied; from=<spam18@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:54:50 mail postfix/smtpd[7867]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam19@bad.test>: Relay access denied; from=<spam19@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:54:57 mail postfix/qmgr[7349]: 451289: to=<user20@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=2.02, status=sent (250 2.0.0 OK)
+Sep 17 12:55:04 mail postfix/smtp[6221]: 4DBA54: to=<user21@corp.test>, relay=mx.corp.test[93.184.216.34]:25, delay=2.89, status=bounced (250 2.0.0 OK)
+Sep 17 12:55:11 mail postfix/smtp[1674]: 28EDB9: to=<user22@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=3.17, status=deferred (250 2.0.0 OK)
+Sep 17 12:55:18 mail postfix/smtpd[7038]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam23@bad.test>: Relay access denied; from=<spam23@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:55:25 mail postfix/qmgr[5329]: 70E977: to=<user24@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=3.94, status=bounced (250 2.0.0 OK)
+Sep 17 12:55:32 mail postfix/smtpd[6698]: 4B8D6A: to=<user25@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=3.17, status=sent (250 2.0.0 OK)
+Sep 17 12:55:39 mail postfix/qmgr[4271]: 17F944: to=<user26@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=1.41, status=deferred (250 2.0.0 OK)
+Sep 17 12:55:46 mail postfix/qmgr[1107]: 950FFE: to=<user27@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=2.26, status=sent (250 2.0.0 OK)
+Sep 17 12:55:53 mail postfix/smtpd[3319]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam28@bad.test>: Relay access denied; from=<spam28@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:56:00 mail postfix/smtpd[6145]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam29@bad.test>: Relay access denied; from=<spam29@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:56:07 mail postfix/smtpd[3497]: 925C5C: to=<user30@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=4.15, status=sent (250 2.0.0 OK)
+Sep 17 12:56:14 mail postfix/qmgr[6226]: 5D22DF: to=<user31@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=0.14, status=bounced (250 2.0.0 OK)
+Sep 17 12:56:21 mail postfix/smtp[5843]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam32@bad.test>: Relay access denied; from=<spam32@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:56:28 mail postfix/smtp[4449]: 8E8D82: to=<user33@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=3.43, status=sent (250 2.0.0 OK)
+Sep 17 12:56:35 mail postfix/smtpd[4235]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam34@bad.test>: Relay access denied; from=<spam34@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:56:42 mail postfix/smtpd[2889]: 2969BD: to=<user35@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=4.85, status=sent (250 2.0.0 OK)
+Sep 17 12:56:49 mail postfix/smtp[4039]: 295739: to=<user36@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=3.88, status=sent (250 2.0.0 OK)
+Sep 17 12:56:56 mail postfix/smtpd[4007]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam37@bad.test>: Relay access denied; from=<spam37@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:57:03 mail postfix/smtp[9151]: 7844FF: to=<user38@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=1.78, status=sent (250 2.0.0 OK)
+Sep 17 12:57:10 mail postfix/smtp[4308]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam39@bad.test>: Relay access denied; from=<spam39@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:57:17 mail postfix/smtp[1205]: 5989C7: to=<user40@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=1.24, status=deferred (250 2.0.0 OK)
+Sep 17 12:57:24 mail postfix/smtp[5402]: 8E9B1C: to=<user41@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=0.19, status=bounced (250 2.0.0 OK)
+Sep 17 12:57:31 mail postfix/smtp[7366]: 6AFDDC: to=<user42@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=1.87, status=sent (250 2.0.0 OK)
+Sep 17 12:57:38 mail postfix/smtp[2115]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam43@bad.test>: Relay access denied; from=<spam43@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:57:45 mail postfix/qmgr[6728]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam44@bad.test>: Relay access denied; from=<spam44@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:57:52 mail postfix/smtp[7504]: 12FE83: to=<user45@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=3.39, status=deferred (250 2.0.0 OK)
+Sep 17 12:57:59 mail postfix/smtpd[8995]: 932FC8: to=<user46@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=0.12, status=sent (250 2.0.0 OK)
+Sep 17 12:58:06 mail postfix/smtp[8376]: 3401AF: to=<user47@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=0.86, status=sent (250 2.0.0 OK)
+Sep 17 12:58:13 mail postfix/smtpd[8564]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam48@bad.test>: Relay access denied; from=<spam48@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:58:20 mail postfix/smtpd[8308]: 3F10E1: to=<user49@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=1.69, status=sent (250 2.0.0 OK)
+Sep 17 12:58:27 mail postfix/smtp[6209]: 9038EE: to=<user50@corp.test>, relay=mx.corp.test[93.184.216.34]:25, delay=1.28, status=sent (250 2.0.0 OK)
+Sep 17 12:58:34 mail postfix/smtp[1520]: 5F4E76: to=<user51@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=3.71, status=sent (250 2.0.0 OK)
+Sep 17 12:58:41 mail postfix/smtp[3295]: 3E289C: to=<user52@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=3.54, status=deferred (250 2.0.0 OK)
+Sep 17 12:58:48 mail postfix/qmgr[8512]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam53@bad.test>: Relay access denied; from=<spam53@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:58:55 mail postfix/smtp[3562]: 4DA974: to=<user54@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=0.27, status=sent (250 2.0.0 OK)
+Sep 17 12:59:02 mail postfix/qmgr[2277]: 8E4A9D: to=<user55@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=1.03, status=sent (250 2.0.0 OK)
+Sep 17 12:59:09 mail postfix/smtpd[4035]: 134AE3: to=<user56@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=1.04, status=sent (250 2.0.0 OK)
+Sep 17 12:59:16 mail postfix/qmgr[4988]: 974A93: to=<user57@corp.test>, relay=mx.corp.test[93.184.216.34]:25, delay=0.19, status=sent (250 2.0.0 OK)
+Sep 17 12:59:23 mail postfix/smtpd[7170]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam58@bad.test>: Relay access denied; from=<spam58@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:59:30 mail postfix/smtp[3688]: 8FCED6: to=<user59@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=1.67, status=deferred (250 2.0.0 OK)
+Sep 17 12:59:37 mail postfix/smtpd[6611]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam60@bad.test>: Relay access denied; from=<spam60@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:59:44 mail postfix/qmgr[3363]: 38D092: to=<user61@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=2.11, status=sent (250 2.0.0 OK)
+Sep 17 12:59:51 mail postfix/qmgr[7492]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam62@bad.test>: Relay access denied; from=<spam62@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 12:59:58 mail postfix/smtpd[1730]: 8ED4EB: to=<user63@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=4.25, status=sent (250 2.0.0 OK)
+Sep 17 13:00:05 mail postfix/qmgr[6615]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam64@bad.test>: Relay access denied; from=<spam64@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:00:12 mail postfix/smtpd[2955]: 69D389: to=<user65@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=2.75, status=sent (250 2.0.0 OK)
+Sep 17 13:00:19 mail postfix/smtpd[3275]: 6A3D1E: to=<user66@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=4.99, status=sent (250 2.0.0 OK)
+Sep 17 13:00:26 mail postfix/qmgr[1022]: 62216C: to=<user67@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=4.40, status=sent (250 2.0.0 OK)
+Sep 17 13:00:33 mail postfix/smtp[7194]: 1F0197: to=<user68@corp.test>, relay=mx.corp.test[93.184.216.34]:25, delay=3.57, status=sent (250 2.0.0 OK)
+Sep 17 13:00:40 mail postfix/smtpd[4035]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam69@bad.test>: Relay access denied; from=<spam69@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:00:47 mail postfix/smtpd[2808]: 3A734B: to=<user70@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=0.12, status=sent (250 2.0.0 OK)
+Sep 17 13:00:54 mail postfix/qmgr[8891]: 860836: to=<user71@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=0.25, status=sent (250 2.0.0 OK)
+Sep 17 13:01:01 mail postfix/qmgr[4953]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam72@bad.test>: Relay access denied; from=<spam72@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:01:08 mail postfix/qmgr[8262]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam73@bad.test>: Relay access denied; from=<spam73@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:01:15 mail postfix/smtp[7177]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam74@bad.test>: Relay access denied; from=<spam74@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:01:22 mail postfix/smtp[3469]: 1A35A1: to=<user75@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=0.58, status=sent (250 2.0.0 OK)
+Sep 17 13:01:29 mail postfix/smtpd[6520]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam76@bad.test>: Relay access denied; from=<spam76@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:01:36 mail postfix/smtp[2710]: 8B90E7: to=<user77@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=0.94, status=sent (250 2.0.0 OK)
+Sep 17 13:01:43 mail postfix/smtp[9779]: 83A15C: to=<user78@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=1.52, status=sent (250 2.0.0 OK)
+Sep 17 13:01:50 mail postfix/smtpd[5229]: 526096: to=<user79@corp.test>, relay=mx.corp.test[93.184.216.34]:25, delay=1.31, status=deferred (250 2.0.0 OK)
+Sep 17 13:01:57 mail postfix/smtp[3197]: 74B867: to=<user80@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=3.34, status=sent (250 2.0.0 OK)
+Sep 17 13:02:04 mail postfix/qmgr[8037]: 84AE1E: to=<user81@corp.test>, relay=mx.corp.test[93.184.216.34]:25, delay=2.53, status=sent (250 2.0.0 OK)
+Sep 17 13:02:11 mail postfix/smtpd[2307]: 3ABFCC: to=<user82@corp.test>, relay=mx.corp.test[93.184.216.34]:25, delay=3.61, status=sent (250 2.0.0 OK)
+Sep 17 13:02:18 mail postfix/smtpd[3783]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam83@bad.test>: Relay access denied; from=<spam83@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:02:25 mail postfix/smtpd[8337]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam84@bad.test>: Relay access denied; from=<spam84@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:02:32 mail postfix/smtpd[4104]: 5AB104: to=<user85@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=0.58, status=sent (250 2.0.0 OK)
+Sep 17 13:02:39 mail postfix/smtp[5627]: 3FAE74: to=<user86@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=3.42, status=sent (250 2.0.0 OK)
+Sep 17 13:02:46 mail postfix/smtpd[4461]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam87@bad.test>: Relay access denied; from=<spam87@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:02:53 mail postfix/smtp[5748]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam88@bad.test>: Relay access denied; from=<spam88@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:03:00 mail postfix/qmgr[2342]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam89@bad.test>: Relay access denied; from=<spam89@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:03:07 mail postfix/qmgr[4768]: 758F66: to=<user90@corp.test>, relay=mx.corp.test[93.184.216.34]:25, delay=2.19, status=sent (250 2.0.0 OK)
+Sep 17 13:03:14 mail postfix/smtp[6529]: 61E7FA: to=<user91@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=2.43, status=sent (250 2.0.0 OK)
+Sep 17 13:03:21 mail postfix/smtp[2681]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam92@bad.test>: Relay access denied; from=<spam92@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:03:28 mail postfix/qmgr[5170]: 4B798A: to=<user93@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=0.62, status=sent (250 2.0.0 OK)
+Sep 17 13:03:35 mail postfix/qmgr[1716]: 25E2BD: to=<user94@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=1.63, status=sent (250 2.0.0 OK)
+Sep 17 13:03:42 mail postfix/smtp[9726]: 19BA28: to=<user95@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=0.77, status=sent (250 2.0.0 OK)
+Sep 17 13:03:49 mail postfix/smtp[6247]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam96@bad.test>: Relay access denied; from=<spam96@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:03:56 mail postfix/smtp[9783]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam97@bad.test>: Relay access denied; from=<spam97@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:04:03 mail postfix/qmgr[4311]: 184A76: to=<user98@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=0.97, status=sent (250 2.0.0 OK)
+Sep 17 13:04:10 mail postfix/smtp[3038]: 74147A: to=<user99@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=4.94, status=bounced (250 2.0.0 OK)
+Sep 17 13:04:17 mail postfix/qmgr[2181]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam100@bad.test>: Relay access denied; from=<spam100@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:04:24 mail postfix/smtpd[9959]: 5EF19F: to=<user101@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=3.87, status=sent (250 2.0.0 OK)
+Sep 17 13:04:31 mail postfix/smtpd[6452]: 3E9A8E: to=<user102@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=4.65, status=sent (250 2.0.0 OK)
+Sep 17 13:04:38 mail postfix/smtp[9405]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam103@bad.test>: Relay access denied; from=<spam103@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:04:45 mail postfix/qmgr[5138]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam104@bad.test>: Relay access denied; from=<spam104@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:04:52 mail postfix/smtp[3019]: 7871E5: to=<user105@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=0.55, status=sent (250 2.0.0 OK)
+Sep 17 13:04:59 mail postfix/smtp[8978]: 8BDFAB: to=<user106@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=4.90, status=bounced (250 2.0.0 OK)
+Sep 17 13:05:06 mail postfix/qmgr[9601]: 906AEA: to=<user107@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=3.08, status=sent (250 2.0.0 OK)
+Sep 17 13:05:13 mail postfix/smtpd[9818]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam108@bad.test>: Relay access denied; from=<spam108@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:05:20 mail postfix/smtpd[5413]: 860DFB: to=<user109@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=4.78, status=sent (250 2.0.0 OK)
+Sep 17 13:05:27 mail postfix/smtpd[3952]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam110@bad.test>: Relay access denied; from=<spam110@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:05:34 mail postfix/smtpd[3634]: 71B05D: to=<user111@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=4.76, status=sent (250 2.0.0 OK)
+Sep 17 13:05:41 mail postfix/smtp[8761]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam112@bad.test>: Relay access denied; from=<spam112@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:05:48 mail postfix/smtp[8168]: 30110E: to=<user113@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=2.89, status=deferred (250 2.0.0 OK)
+Sep 17 13:05:55 mail postfix/smtpd[8439]: 374B17: to=<user114@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=1.41, status=sent (250 2.0.0 OK)
+Sep 17 13:06:02 mail postfix/smtpd[3877]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam115@bad.test>: Relay access denied; from=<spam115@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:06:09 mail postfix/qmgr[3003]: 6286C8: to=<user116@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=2.79, status=sent (250 2.0.0 OK)
+Sep 17 13:06:16 mail postfix/smtpd[1933]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam117@bad.test>: Relay access denied; from=<spam117@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:06:23 mail postfix/smtpd[9309]: 3B0217: to=<user118@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=0.42, status=deferred (250 2.0.0 OK)
+Sep 17 13:06:30 mail postfix/qmgr[6132]: 17CB69: to=<user119@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=1.67, status=bounced (250 2.0.0 OK)
+Sep 17 13:06:37 mail postfix/smtp[9312]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam120@bad.test>: Relay access denied; from=<spam120@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:06:44 mail postfix/qmgr[2985]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam121@bad.test>: Relay access denied; from=<spam121@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:06:51 mail postfix/smtpd[8594]: 9261D3: to=<user122@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=0.97, status=sent (250 2.0.0 OK)
+Sep 17 13:06:58 mail postfix/smtp[9078]: 186C8B: to=<user123@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=0.48, status=sent (250 2.0.0 OK)
+Sep 17 13:07:05 mail postfix/smtp[9907]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam124@bad.test>: Relay access denied; from=<spam124@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:07:12 mail postfix/smtpd[7246]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam125@bad.test>: Relay access denied; from=<spam125@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:07:19 mail postfix/smtpd[9060]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam126@bad.test>: Relay access denied; from=<spam126@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:07:26 mail postfix/smtp[8575]: 53D4E3: to=<user127@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=4.22, status=sent (250 2.0.0 OK)
+Sep 17 13:07:33 mail postfix/smtp[6548]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam128@bad.test>: Relay access denied; from=<spam128@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:07:40 mail postfix/smtp[3489]: 25F58B: to=<user129@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=2.94, status=sent (250 2.0.0 OK)
+Sep 17 13:07:47 mail postfix/smtp[9104]: 551954: to=<user130@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=0.72, status=sent (250 2.0.0 OK)
+Sep 17 13:07:54 mail postfix/qmgr[7472]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam131@bad.test>: Relay access denied; from=<spam131@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:08:01 mail postfix/qmgr[4477]: 646AFE: to=<user132@corp.test>, relay=mx.corp.test[8.8.8.8]:25, delay=1.10, status=sent (250 2.0.0 OK)
+Sep 17 13:08:08 mail postfix/qmgr[8207]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam133@bad.test>: Relay access denied; from=<spam133@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:08:15 mail postfix/smtpd[2396]: 8ACFFE: to=<user134@corp.test>, relay=mx.corp.test[93.184.216.34]:25, delay=1.17, status=bounced (250 2.0.0 OK)
+Sep 17 13:08:22 mail postfix/qmgr[2619]: 8986BA: to=<user135@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=0.33, status=sent (250 2.0.0 OK)
+Sep 17 13:08:29 mail postfix/qmgr[3636]: 5F88C1: to=<user136@corp.test>, relay=mx.corp.test[198.51.100.23]:25, delay=4.05, status=sent (250 2.0.0 OK)
+Sep 17 13:08:36 mail postfix/smtpd[6779]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam137@bad.test>: Relay access denied; from=<spam137@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:08:43 mail postfix/smtpd[3492]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam138@bad.test>: Relay access denied; from=<spam138@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:08:50 mail postfix/qmgr[2955]: 1FD88B: to=<user139@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=3.83, status=sent (250 2.0.0 OK)
+Sep 17 13:08:57 mail postfix/qmgr[1236]: 50C42E: to=<user140@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=1.01, status=sent (250 2.0.0 OK)
+Sep 17 13:09:04 mail postfix/qmgr[9774]: NOQUEUE: reject: RCPT from unknown[45.83.64.12]: 554 5.7.1 <spam141@bad.test>: Relay access denied; from=<spam141@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:09:11 mail postfix/qmgr[5101]: 2533F2: to=<user142@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=0.27, status=sent (250 2.0.0 OK)
+Sep 17 13:09:18 mail postfix/smtpd[4963]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam143@bad.test>: Relay access denied; from=<spam143@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:09:25 mail postfix/smtpd[4659]: NOQUEUE: reject: RCPT from unknown[198.18.0.9]: 554 5.7.1 <spam144@bad.test>: Relay access denied; from=<spam144@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>
+Sep 17 13:09:32 mail postfix/smtpd[4254]: 7E2587: to=<user145@corp.test>, relay=mx.corp.test[93.184.216.34]:25, delay=1.88, status=deferred (250 2.0.0 OK)
+Sep 17 13:09:39 mail postfix/qmgr[3420]: 411A04: to=<user146@corp.test>, relay=mx.corp.test[203.0.113.9]:25, delay=3.10, status=sent (250 2.0.0 OK)
+Sep 17 13:09:46 mail postfix/qmgr[3295]: 1038A5: to=<user147@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=0.34, status=sent (250 2.0.0 OK)
+Sep 17 13:09:53 mail postfix/smtpd[8900]: 55A61A: to=<user148@corp.test>, relay=mx.corp.test[1.1.1.1]:25, delay=0.39, status=sent (250 2.0.0 OK)
+Sep 17 13:10:00 mail postfix/smtpd[7211]: NOQUEUE: reject: RCPT from unknown[198.18.7.41]: 554 5.7.1 <spam149@bad.test>: Relay access denied; from=<spam149@bad.test> to=<user@corp.test> proto=ESMTP helo=<bad.test>

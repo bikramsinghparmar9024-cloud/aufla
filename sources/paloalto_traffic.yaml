@@ -1,0 +1,34 @@
+# Palo Alto PAN-OS TRAFFIC log (comma-separated).
+#
+# PAN-OS writes a fixed CSV column order per log type. The TRAFFIC layout used
+# here: 4=Type, 8=Source address, 9=Destination address, 25=Source port,
+# 26=Destination port, 30=Protocol, 31=Action, 32=Bytes.
+#
+# The type discriminator is checked first so a THREAT or SYSTEM log from the
+# same device is never read with the TRAFFIC column order.
+source: paloalto_traffic
+format: csv
+ocsf_version: "1.5.0"
+version: 1
+description: Palo Alto PAN-OS traffic logs.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: traffic
+    match: { field: $4, equals: "TRAFFIC" }
+    ocsf_class: 4001
+    fields:
+      src_endpoint.ip: $8
+      dst_endpoint.ip: $9
+      src_endpoint.port: $25
+      dst_endpoint.port: $26
+      disposition_id: { from: $31, lookup: firewall_disposition, default: 0 }
+      traffic.bytes: $32
+      connection_info.protocol_num: { from: $30, lookup: proto_number, default: 6 }
+      activity_id: 6
+      severity_id: 1
+      metadata.product.name: PAN-OS
+      metadata.product.vendor_name: Palo Alto Networks
+      metadata.log_name: traffic

@@ -1,0 +1,32 @@
+# Nginx access log, combined format.
+#
+#   10.0.0.5 - alice [17/Sep/2026:13:55:36 +0000] "GET /a HTTP/1.1" 200 1234 "-" "curl/8.0"
+#
+# Parsed with regex rather than by splitting: the request line, referrer and
+# user agent are quoted strings containing spaces, so any whitespace split
+# tears them apart. This is the format's defining awkwardness, not an edge case.
+source: nginx_access
+format: raw
+ocsf_version: "1.5.0"
+version: 1
+description: Nginx HTTP requests, combined log format.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: request
+    ocsf_class: 4002
+    fields:
+      src_endpoint.ip: { from: $_raw, regex: '^(\S+)' }
+      http_request.http_method: { from: $_raw, regex: '"([A-Z]+) ' }
+      http_request.url.path: { from: $_raw, regex: '"[A-Z]+ (\S+)' }
+      http_response.code: { from: $_raw, regex: '" (\d{3}) ' }
+      http_response.length: { from: $_raw, regex: '" \d{3} (\d+)' }
+      http_request.user_agent: { from: $_raw, regex: '"([^"]*)"\s*$' }
+      http_request.referrer: { from: $_raw, regex: '"([^"]*)" "[^"]*"\s*$' }
+      user.name: { from: $_raw, regex: '^\S+ \S+ (\S+) \[' }
+      activity_id: { from: $_raw, regex: '"([A-Z]+) ', lookup: http_method_activity, default: 0 }
+      severity_id: 1
+      metadata.product.name: nginx
+      metadata.log_name: access.log

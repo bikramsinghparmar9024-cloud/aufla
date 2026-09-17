@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import time
 from pathlib import Path
 from typing import Sequence
 
@@ -204,6 +205,63 @@ def cmd_serve(args) -> int:
     return 0
 
 
+def cmd_watch(args) -> int:
+    from .collect import FileTailer, WatchSpec, default_specs
+
+    store, ledger, registry, ocsf = _open(args.data, args.sources)
+    store.close(); ledger.close(); ocsf.close()
+
+    def factory():
+        s_ = SQLiteRawStore(args.data / "raw.db")
+        l_ = Ledger(
+            args.data / "ledger.db",
+            batch_key=load_or_create_keypair(
+                args.data / "keys" / "batch.pem", "batch"
+            ),
+        )
+        o_ = OCSFStore(args.data / "ocsf.db")
+        pipe = Pipeline(s_, l_, registry, ocsf=o_)
+
+        def close():
+            s_.close(); l_.close(); o_.close()
+
+        return pipe, close
+
+    specs = default_specs()
+    if args.file:
+        if not args.source:
+            print("error: --source is required with --file", file=sys.stderr)
+            return 1
+        specs = [WatchSpec(Path(args.file).name, args.source)]
+        directory = Path(args.file).parent
+    else:
+        directory = args.dir
+
+    tailer = FileTailer(
+        directory, factory, specs=specs, interval=args.interval,
+        state_path=args.data / "tail_state.json",
+    )
+
+    print(f"watching {directory} ({len(specs)} patterns), Ctrl+C to stop")
+    try:
+        while True:
+            stats = tailer.poll_once()
+            print(
+                f"  files={stats.files} lines={stats.lines} "
+                f"accepted={stats.accepted} rotations={stats.rotations}",
+                flush=True,
+            )
+            if args.once:
+                break
+            time.sleep(args.interval)
+    except KeyboardInterrupt:
+        pass
+    print()
+    for err in stats.errors[-3:]:
+        print(f"  warning: {err}", file=sys.stderr)
+    return 0
+
+
 def cmd_discover(args) -> int:
     from .discovery import ProposalStore, approve_proposal, run_discovery
 
@@ -355,6 +413,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="seconds between live-capture polls (default: 10)",
     )
     p.set_defaults(func=cmd_serve)
+
+    p = sub.add_parser("watch", help="follow log files and ingest what is appended")
+    p.add_argument("--dir", type=Path, default=Path("docker/logs"))
+    p.add_argument("--file", help="follow one file instead of the default set")
+    p.add_argument("--source", help="source id for --file")
+    p.add_argument("--interval", type=float, default=3.0)
+    p.add_argument("--once", action="store_true", help="one pass, then exit")
+    p.set_defaults(func=cmd_watch)
 
     p = sub.add_parser("discover", help="propose mappings for quarantined sources")
     p.add_argument("--approve", type=int, help="approve a queued proposal by id")

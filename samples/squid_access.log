@@ -1,0 +1,2 @@
+1789588800.123    342 10.0.0.5 TCP_MISS/200 8431 GET http://intranet.test/report - HIER_DIRECT/10.0.1.9 text/html
+1789588801.456    12 10.0.0.7 TCP_DENIED/403 1120 GET http://blocked.test/x - HIER_NONE/- text/html

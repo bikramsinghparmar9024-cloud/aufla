@@ -17,6 +17,9 @@ from __future__ import annotations
 
 import re
 import uuid
+
+# re.error is the only thing group() raises beyond IndexError.
+error_types = re.error
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -188,6 +191,23 @@ class Normalizer:
 
         if value is None:
             return spec.default
+
+        if spec.regex:
+            # Extraction runs first: a transform operates on the captured
+            # value, not on the prose it was buried in.
+            match = re.search(spec.regex, str(value))
+            if match is None:
+                return spec.default
+            try:
+                value = match.group(spec.group)
+            except (IndexError, error_types):
+                record.warnings.append(
+                    f"{target}: capture group {spec.group!r} not in "
+                    f"regex {spec.regex!r}"
+                )
+                return spec.default
+            if value is None:
+                return spec.default
 
         if spec.transform:
             try:

@@ -1,0 +1,41 @@
+# Linux auditd.
+#
+#   type=USER_LOGIN msg=audit(1789635000.123:456): pid=1234 uid=0 auid=1000
+#   ses=3 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=10.0.0.9
+#   addr=10.0.0.9 terminal=ssh res=failed'
+#
+# Natively key=value, so no inference is needed. auditd quotes its string
+# values, which the key-value parser already strips.
+source: linux_auditd
+format: kv
+ocsf_version: "1.5.0"
+version: 1
+description: Linux audit subsystem events.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: user_login
+    match: { field: $type, in: ["USER_LOGIN", "USER_AUTH", "USER_ACCT"] }
+    ocsf_class: 3002
+    fields:
+      user.name: $acct
+      user.uid: $uid
+      src_endpoint.ip: $addr
+      severity_id: { from: $res, lookup: audit_result_severity, default: 1 }
+      status_id: { from: $res, lookup: audit_result_status, default: 0 }
+      activity_id: 1
+      metadata.product.name: auditd
+      metadata.log_name: audit.log
+
+  - name: audit_event
+    ocsf_class: 2004
+    fields:
+      finding_info.title: $type
+      finding_info.uid: $pid
+      user.uid: $uid
+      severity_id: 2
+      activity_id: 1
+      metadata.product.name: auditd
+      metadata.log_name: audit.log

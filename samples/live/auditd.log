@@ -1,0 +1,150 @@
+type=SYSCALL msg=audit(1789649557.661:581): pid=8685 uid=0 comm="systemd" exe="/usr/bin/systemctl" key="privileged"
+type=SYSCALL msg=audit(1789649564.114:9734): pid=8831 uid=0 comm="cat" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789649571.273:3312): pid=9241 uid=0 auid=0 ses=48 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.56 terminal=ssh res=success'
+type=SYSCALL msg=audit(1789649578.572:1921): pid=1398 uid=0 comm="cat" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789649585.550:9366): pid=6333 uid=0 auid=1001 ses=30 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.9 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789649592.489:3325): pid=2064 uid=0 auid=0 ses=25 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.52 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789649599.899:1544): pid=4718 uid=0 auid=1000 ses=48 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.25 terminal=ssh res=success'
+type=PATH msg=audit(1789649606.753:1698): pid=7387 uid=1000 comm="cat" exe="/usr/bin/systemctl" key="privileged"
+type=CONFIG_CHANGE msg=audit(1789649613.632:6868): pid=3934 uid=1000 comm="systemd" exe="/usr/bin/systemctl" key="privileged"
+type=AVC msg=audit(1789649620.468:8111): pid=8110 uid=1000 comm="sudo" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789649627.724:5339): pid=5055 uid=0 auid=1001 ses=6 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.34 terminal=ssh res=success'
+type=PATH msg=audit(1789649634.200:6140): pid=8491 uid=1000 comm="sshd" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789649641.701:8556): pid=1222 uid=0 auid=1000 ses=10 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.34 terminal=ssh res=success'
+type=CONFIG_CHANGE msg=audit(1789649648.617:5573): pid=6046 uid=1000 comm="systemd" exe="/usr/bin/cat" key="privileged"
+type=PATH msg=audit(1789649655.862:3059): pid=4063 uid=1000 comm="systemd" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789649662.836:4344): pid=9969 uid=0 auid=1000 ses=11 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.48 terminal=ssh res=success'
+type=SYSCALL msg=audit(1789649669.169:9518): pid=1827 uid=1000 comm="sudo" exe="/usr/bin/cat" key="privileged"
+type=PATH msg=audit(1789649676.206:851): pid=3504 uid=1000 comm="cat" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789649683.262:6334): pid=6457 uid=0 auid=0 ses=46 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.55 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789649690.849:7251): pid=3653 uid=0 auid=0 ses=40 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.30 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789649697.572:6365): pid=5465 uid=0 auid=0 ses=48 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.33 terminal=ssh res=success'
+type=CONFIG_CHANGE msg=audit(1789649704.917:9180): pid=1199 uid=1000 comm="systemd" exe="/usr/bin/sudo" key="privileged"
+type=AVC msg=audit(1789649711.303:1871): pid=2173 uid=0 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789649718.159:6799): pid=5278 uid=0 auid=1001 ses=9 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.23 terminal=ssh res=failed'
+type=AVC msg=audit(1789649725.642:8036): pid=6346 uid=1000 comm="cat" exe="/usr/bin/cat" key="privileged"
+type=AVC msg=audit(1789649732.468:6209): pid=9848 uid=1000 comm="sshd" exe="/usr/bin/systemctl" key="privileged"
+type=PATH msg=audit(1789649739.569:9257): pid=1890 uid=1000 comm="systemd" exe="/usr/bin/systemctl" key="privileged"
+type=CONFIG_CHANGE msg=audit(1789649746.953:3808): pid=3163 uid=0 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789649753.245:1395): pid=5327 uid=0 auid=1001 ses=33 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.22 terminal=ssh res=success'
+type=SYSCALL msg=audit(1789649760.164:550): pid=9900 uid=1000 comm="sshd" exe="/usr/bin/cat" key="privileged"
+type=AVC msg=audit(1789649767.773:3480): pid=9219 uid=1000 comm="sudo" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789649774.458:4127): pid=8504 uid=0 auid=1000 ses=50 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.24 terminal=ssh res=success'
+type=PATH msg=audit(1789649781.778:1798): pid=9976 uid=1000 comm="cat" exe="/usr/bin/cat" key="privileged"
+type=CONFIG_CHANGE msg=audit(1789649788.398:857): pid=6807 uid=1000 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=CONFIG_CHANGE msg=audit(1789649795.827:4471): pid=8930 uid=1000 comm="cat" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789649802.116:3222): pid=3948 uid=0 auid=0 ses=4 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.49 terminal=ssh res=failed'
+type=AVC msg=audit(1789649809.921:7876): pid=1101 uid=0 comm="systemd" exe="/usr/bin/cat" key="privileged"
+type=PATH msg=audit(1789649816.647:8219): pid=8953 uid=0 comm="systemd" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789649823.365:5004): pid=4448 uid=0 auid=1000 ses=14 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.25 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789649830.300:3447): pid=4549 uid=0 auid=0 ses=25 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.50 terminal=ssh res=success'
+type=AVC msg=audit(1789649837.805:300): pid=8465 uid=0 comm="systemd" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789649844.608:3454): pid=3203 uid=0 auid=0 ses=5 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.56 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789649851.840:4069): pid=8464 uid=0 auid=1000 ses=4 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.12 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789649858.822:2169): pid=7999 uid=0 auid=1000 ses=41 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.28 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789649865.292:6371): pid=8223 uid=0 auid=1000 ses=21 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.32 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789649872.420:6475): pid=2401 uid=0 auid=1000 ses=27 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.5 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789649879.357:2694): pid=3730 uid=0 auid=0 ses=45 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.17 terminal=ssh res=failed'
+type=SYSCALL msg=audit(1789649886.813:4213): pid=5442 uid=0 comm="sshd" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789649893.254:7792): pid=7540 uid=0 auid=1001 ses=25 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.37 terminal=ssh res=success'
+type=PATH msg=audit(1789649900.385:7553): pid=9722 uid=0 comm="sudo" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789649907.879:8353): pid=4853 uid=0 auid=1001 ses=6 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.48 terminal=ssh res=success'
+type=CONFIG_CHANGE msg=audit(1789649914.987:2914): pid=7814 uid=1000 comm="cat" exe="/usr/bin/systemctl" key="privileged"
+type=PATH msg=audit(1789649921.842:4714): pid=6300 uid=1000 comm="sshd" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789649928.840:2153): pid=7382 uid=0 auid=1000 ses=13 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.51 terminal=ssh res=success'
+type=SYSCALL msg=audit(1789649935.492:240): pid=8241 uid=1000 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789649942.983:2716): pid=1357 uid=0 auid=1000 ses=39 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.33 terminal=ssh res=failed'
+type=SYSCALL msg=audit(1789649949.408:2643): pid=7499 uid=0 comm="systemd" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789649956.960:1658): pid=6389 uid=0 auid=1000 ses=2 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.16 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789649963.957:6937): pid=9436 uid=0 auid=1001 ses=28 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.36 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789649970.650:2230): pid=6497 uid=0 auid=1001 ses=29 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.14 terminal=ssh res=success'
+type=SYSCALL msg=audit(1789649977.848:5499): pid=2559 uid=0 comm="cat" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789649984.248:6166): pid=3187 uid=0 auid=1000 ses=23 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.21 terminal=ssh res=success'
+type=PATH msg=audit(1789649991.930:6387): pid=7026 uid=0 comm="sudo" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789649998.727:4261): pid=2494 uid=0 auid=0 ses=5 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.20 terminal=ssh res=success'
+type=AVC msg=audit(1789650005.416:6830): pid=9151 uid=0 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789650012.297:106): pid=1640 uid=0 auid=0 ses=27 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.39 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789650019.288:3191): pid=8063 uid=0 auid=0 ses=11 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.52 terminal=ssh res=success'
+type=PATH msg=audit(1789650026.396:3103): pid=1963 uid=0 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789650033.439:914): pid=1104 uid=0 auid=1000 ses=14 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.49 terminal=ssh res=success'
+type=AVC msg=audit(1789650040.993:8834): pid=5967 uid=1000 comm="cat" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789650047.351:8928): pid=7534 uid=0 auid=0 ses=22 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.19 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789650054.210:8130): pid=3572 uid=0 auid=1000 ses=12 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.6 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789650061.362:9846): pid=5307 uid=0 auid=1001 ses=42 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.5 terminal=ssh res=success'
+type=AVC msg=audit(1789650068.484:2189): pid=9122 uid=1000 comm="sshd" exe="/usr/bin/systemctl" key="privileged"
+type=AVC msg=audit(1789650075.400:3199): pid=8334 uid=0 comm="cat" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789650082.823:7734): pid=1798 uid=0 auid=1001 ses=5 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.26 terminal=ssh res=success'
+type=SYSCALL msg=audit(1789650089.838:6905): pid=8198 uid=0 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=SYSCALL msg=audit(1789650096.984:7144): pid=7091 uid=0 comm="systemd" exe="/usr/bin/cat" key="privileged"
+type=PATH msg=audit(1789650103.248:9217): pid=2734 uid=1000 comm="sshd" exe="/usr/bin/systemctl" key="privileged"
+type=PATH msg=audit(1789650110.808:9082): pid=9887 uid=1000 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=CONFIG_CHANGE msg=audit(1789650117.478:8340): pid=1048 uid=0 comm="cat" exe="/usr/bin/sudo" key="privileged"
+type=SYSCALL msg=audit(1789650124.717:351): pid=9932 uid=1000 comm="systemd" exe="/usr/bin/sudo" key="privileged"
+type=SYSCALL msg=audit(1789650131.511:5473): pid=5586 uid=0 comm="systemd" exe="/usr/bin/sudo" key="privileged"
+type=CONFIG_CHANGE msg=audit(1789650138.158:5858): pid=9977 uid=1000 comm="cat" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789650145.974:2612): pid=6762 uid=0 auid=0 ses=42 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.55 terminal=ssh res=success'
+type=PATH msg=audit(1789650152.389:9952): pid=8933 uid=0 comm="sudo" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789650159.935:8816): pid=5338 uid=0 auid=0 ses=42 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.14 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789650166.843:6815): pid=9465 uid=0 auid=1000 ses=11 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.39 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789650173.800:7613): pid=4833 uid=0 auid=1001 ses=47 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.32 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789650180.440:4847): pid=6336 uid=0 auid=1000 ses=10 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.23 terminal=ssh res=failed'
+type=CONFIG_CHANGE msg=audit(1789650187.568:881): pid=5966 uid=1000 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789650194.830:9231): pid=4506 uid=0 auid=0 ses=48 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.24 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789650201.813:5533): pid=4311 uid=0 auid=0 ses=3 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.17 terminal=ssh res=failed'
+type=SYSCALL msg=audit(1789650208.902:9560): pid=9381 uid=0 comm="sudo" exe="/usr/bin/cat" key="privileged"
+type=SYSCALL msg=audit(1789650215.150:7105): pid=5791 uid=0 comm="sudo" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789650222.291:1967): pid=1660 uid=0 auid=1000 ses=31 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.27 terminal=ssh res=success'
+type=CONFIG_CHANGE msg=audit(1789650229.869:3521): pid=9087 uid=0 comm="sshd" exe="/usr/bin/cat" key="privileged"
+type=AVC msg=audit(1789650236.295:5008): pid=3210 uid=0 comm="cat" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789650243.445:6533): pid=1532 uid=0 auid=0 ses=18 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.19 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789650250.380:6839): pid=7559 uid=0 auid=0 ses=13 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.55 terminal=ssh res=success'
+type=SYSCALL msg=audit(1789650257.348:2165): pid=3134 uid=0 comm="cat" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789650264.554:3242): pid=2483 uid=0 auid=1001 ses=46 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.52 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789650271.717:3049): pid=9905 uid=0 auid=1000 ses=50 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.40 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789650278.348:7826): pid=8284 uid=0 auid=0 ses=18 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.23 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789650285.853:6330): pid=2864 uid=0 auid=1000 ses=38 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.9 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789650292.477:2872): pid=5441 uid=0 auid=1000 ses=41 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.46 terminal=ssh res=failed'
+type=SYSCALL msg=audit(1789650299.617:2456): pid=2498 uid=0 comm="sshd" exe="/usr/bin/systemctl" key="privileged"
+type=CONFIG_CHANGE msg=audit(1789650306.520:9417): pid=4746 uid=0 comm="systemd" exe="/usr/bin/cat" key="privileged"
+type=AVC msg=audit(1789650313.443:7492): pid=9215 uid=0 comm="sshd" exe="/usr/bin/systemctl" key="privileged"
+type=PATH msg=audit(1789650320.894:8253): pid=1705 uid=1000 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=USER_LOGIN msg=audit(1789650327.713:6910): pid=2701 uid=0 auid=1000 ses=33 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.38 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789650334.391:396): pid=6562 uid=0 auid=1000 ses=49 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.50 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789650341.771:2788): pid=2090 uid=0 auid=1001 ses=29 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.38 terminal=ssh res=success'
+type=SYSCALL msg=audit(1789650348.268:3023): pid=7446 uid=0 comm="systemd" exe="/usr/bin/systemctl" key="privileged"
+type=SYSCALL msg=audit(1789650355.938:3657): pid=1548 uid=0 comm="systemd" exe="/usr/bin/systemctl" key="privileged"
+type=SYSCALL msg=audit(1789650362.370:9700): pid=2018 uid=0 comm="sshd" exe="/usr/bin/sudo" key="privileged"
+type=PATH msg=audit(1789650369.320:6300): pid=9935 uid=0 comm="sshd" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789650376.896:2544): pid=3085 uid=0 auid=0 ses=17 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.22 terminal=ssh res=success'
+type=SYSCALL msg=audit(1789650383.163:9570): pid=3081 uid=1000 comm="sshd" exe="/usr/bin/cat" key="privileged"
+type=AVC msg=audit(1789650390.117:1387): pid=9261 uid=1000 comm="sudo" exe="/usr/bin/sudo" key="privileged"
+type=SYSCALL msg=audit(1789650397.407:8512): pid=2185 uid=0 comm="sudo" exe="/usr/bin/systemctl" key="privileged"
+type=SYSCALL msg=audit(1789650404.476:5926): pid=1414 uid=1000 comm="systemd" exe="/usr/bin/systemctl" key="privileged"
+type=CONFIG_CHANGE msg=audit(1789650411.996:9115): pid=8312 uid=1000 comm="sudo" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789650418.614:4196): pid=3820 uid=0 auid=1000 ses=7 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.50 terminal=ssh res=failed'
+type=AVC msg=audit(1789650425.183:6458): pid=4582 uid=1000 comm="sudo" exe="/usr/bin/cat" key="privileged"
+type=SYSCALL msg=audit(1789650432.179:2586): pid=7730 uid=0 comm="cat" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789650439.340:1827): pid=1557 uid=0 auid=1001 ses=10 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.25 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789650446.689:9830): pid=4256 uid=0 auid=0 ses=38 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.12 terminal=ssh res=success'
+type=CONFIG_CHANGE msg=audit(1789650453.911:8092): pid=3874 uid=0 comm="systemd" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789650460.687:4232): pid=3161 uid=0 auid=1001 ses=48 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.0.17 terminal=ssh res=failed'
+type=AVC msg=audit(1789650467.362:2270): pid=1729 uid=0 comm="sudo" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789650474.475:9750): pid=6659 uid=0 auid=1000 ses=28 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.8 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789650481.389:3968): pid=6716 uid=0 auid=1000 ses=12 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.37 terminal=ssh res=success'
+type=CONFIG_CHANGE msg=audit(1789650488.950:3574): pid=9998 uid=0 comm="sshd" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789650495.256:5283): pid=8491 uid=0 auid=1000 ses=50 msg='op=login acct="admin" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.17 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789650502.436:4956): pid=6149 uid=0 auid=0 ses=29 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.48 terminal=ssh res=failed'
+type=CONFIG_CHANGE msg=audit(1789650509.594:9051): pid=5765 uid=0 comm="sudo" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789650516.409:3101): pid=6379 uid=0 auid=0 ses=32 msg='op=login acct="root" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.8 terminal=ssh res=success'
+type=USER_LOGIN msg=audit(1789650523.608:2006): pid=1856 uid=0 auid=0 ses=26 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.53 terminal=ssh res=failed'
+type=USER_LOGIN msg=audit(1789650530.884:5749): pid=5513 uid=0 auid=1001 ses=17 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.45 terminal=ssh res=failed'
+type=AVC msg=audit(1789650537.564:6066): pid=9770 uid=1000 comm="cat" exe="/usr/bin/cat" key="privileged"
+type=PATH msg=audit(1789650544.158:2546): pid=5372 uid=0 comm="cat" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789650551.681:1448): pid=8066 uid=0 auid=1001 ses=15 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.23 terminal=ssh res=failed'
+type=SYSCALL msg=audit(1789650558.892:1892): pid=3226 uid=0 comm="systemd" exe="/usr/bin/systemctl" key="privileged"
+type=AVC msg=audit(1789650565.240:9675): pid=4035 uid=0 comm="systemd" exe="/usr/bin/systemctl" key="privileged"
+type=CONFIG_CHANGE msg=audit(1789650572.632:1003): pid=9353 uid=0 comm="sshd" exe="/usr/bin/systemctl" key="privileged"
+type=USER_LOGIN msg=audit(1789650579.785:4071): pid=5768 uid=0 auid=1001 ses=1 msg='op=login acct="deploy" exe="/usr/sbin/sshd" hostname=? addr=10.0.1.23 terminal=ssh res=success'
+type=PATH msg=audit(1789650586.340:3922): pid=2046 uid=1000 comm="sshd" exe="/usr/bin/cat" key="privileged"
+type=USER_LOGIN msg=audit(1789650593.578:1141): pid=1935 uid=0 auid=0 ses=17 msg='op=login acct="svc-backup" exe="/usr/sbin/sshd" hostname=? addr=10.0.2.59 terminal=ssh res=success'
+type=CONFIG_CHANGE msg=audit(1789650600.219:6434): pid=5495 uid=0 comm="sshd" exe="/usr/bin/sudo" key="privileged"

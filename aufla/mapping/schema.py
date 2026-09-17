@@ -118,23 +118,52 @@ class FieldSpec:
     lookup: str | None = None
     default: Any = None
     timezone: str | None = None
+    # A capture group pulled out of the referenced value. Needed because a
+    # large share of real network gear -- Cisco ASA, OpenSSH, MikroTik -- logs
+    # prose with values embedded in it rather than delimited fields, and no
+    # amount of splitting reaches "10.0.0.5" inside "from 10.0.0.5 port 22".
+    regex: str | None = None
+    group: int | str = 1
 
     @classmethod
     def parse(cls, raw: Any) -> "FieldSpec":
         if isinstance(raw, dict):
             if "from" not in raw:
                 raise MappingError(f"field spec {raw!r} is missing 'from'")
-            unknown = set(raw) - {"from", "transform", "lookup", "default", "tz"}
+            unknown = set(raw) - {
+                "from", "transform", "lookup", "default", "tz", "regex", "group",
+            }
             if unknown:
                 raise MappingError(
                     f"field spec has unknown keys: {sorted(unknown)}"
                 )
+
+            pattern = raw.get("regex")
+            if pattern is not None:
+                # Compiled at load, so a broken pattern fails the mapping now
+                # rather than silently dropping a field at 3am.
+                try:
+                    compiled = re.compile(pattern)
+                except (re.error, TypeError) as exc:
+                    raise MappingError(f"invalid regex {pattern!r}: {exc}") from None
+                if not compiled.groups and "group" not in raw:
+                    raise MappingError(
+                        f"regex {pattern!r} has no capture group; add one, or "
+                        "set group: 0 to take the whole match"
+                    )
+
+            group = raw.get("group", 1)
+            if not isinstance(group, (int, str)) or isinstance(group, bool):
+                raise MappingError("'group' must be a capture index or name")
+
             return cls(
                 ref=FieldRef.parse(raw["from"]),
                 transform=raw.get("transform"),
                 lookup=raw.get("lookup"),
                 default=raw.get("default"),
                 timezone=raw.get("tz"),
+                regex=pattern,
+                group=group,
             )
         return cls(ref=FieldRef.parse(raw))
 
@@ -370,6 +399,8 @@ class Mapping:
                     "fields": {
                         target: {
                             "from": spec.ref.render(),
+                            "regex": spec.regex,
+                            "group": spec.group,
                             "transform": spec.transform,
                             "lookup": spec.lookup,
                             "default": spec.default,

@@ -1,0 +1,120 @@
+CEF:0|Vendor|SecureAppliance|2.4|465|Port scan detected|2|src=198.18.0.9 dst=10.0.1.56 spt=10114 dpt=445 proto=TCP act=blocked rt=1789649767000
+CEF:0|Vendor|SecureAppliance|2.4|913|Policy violation|1|src=198.18.0.9 dst=10.0.2.44 spt=41312 dpt=22 proto=TCP act=blocked rt=1789649774000
+CEF:0|Vendor|SecureAppliance|2.4|562|Malware blocked|8|src=45.83.64.12 dst=10.0.2.22 spt=28438 dpt=445 proto=TCP act=blocked rt=1789649781000
+CEF:0|Vendor|SecureAppliance|2.4|702|Policy violation|5|src=45.83.64.12 dst=10.0.2.19 spt=52365 dpt=22 proto=TCP act=blocked rt=1789649788000
+CEF:0|Vendor|SecureAppliance|2.4|795|Port scan detected|4|src=45.83.64.12 dst=10.0.2.55 spt=59639 dpt=445 proto=TCP act=allowed rt=1789649795000
+CEF:0|Vendor|SecureAppliance|2.4|751|Port scan detected|5|src=198.18.0.9 dst=10.0.2.49 spt=23106 dpt=22 proto=TCP act=allowed rt=1789649802000
+CEF:0|Vendor|SecureAppliance|2.4|533|Policy violation|8|src=198.18.0.9 dst=10.0.0.54 spt=50581 dpt=22 proto=TCP act=blocked rt=1789649809000
+CEF:0|Vendor|SecureAppliance|2.4|253|Policy violation|7|src=198.18.0.9 dst=10.0.0.16 spt=41254 dpt=22 proto=TCP act=allowed rt=1789649816000
+CEF:0|Vendor|SecureAppliance|2.4|521|Policy violation|7|src=198.18.0.9 dst=10.0.2.14 spt=15622 dpt=443 proto=TCP act=blocked rt=1789649823000
+CEF:0|Vendor|SecureAppliance|2.4|814|Malware blocked|1|src=198.18.7.41 dst=10.0.2.27 spt=20313 dpt=445 proto=TCP act=allowed rt=1789649830000
+CEF:0|Vendor|SecureAppliance|2.4|329|Malware blocked|5|src=198.18.0.9 dst=10.0.0.23 spt=63747 dpt=443 proto=TCP act=allowed rt=1789649837000
+CEF:0|Vendor|SecureAppliance|2.4|310|Malware blocked|10|src=45.83.64.12 dst=10.0.2.17 spt=11301 dpt=445 proto=TCP act=blocked rt=1789649844000
+CEF:0|Vendor|SecureAppliance|2.4|556|Malware blocked|9|src=198.18.7.41 dst=10.0.0.25 spt=21359 dpt=22 proto=TCP act=blocked rt=1789649851000
+CEF:0|Vendor|SecureAppliance|2.4|228|Port scan detected|9|src=198.18.7.41 dst=10.0.2.7 spt=32385 dpt=22 proto=TCP act=blocked rt=1789649858000
+CEF:0|Vendor|SecureAppliance|2.4|956|Policy violation|4|src=198.18.0.9 dst=10.0.2.19 spt=2815 dpt=443 proto=TCP act=blocked rt=1789649865000
+CEF:0|Vendor|SecureAppliance|2.4|511|Malware blocked|6|src=45.83.64.12 dst=10.0.1.19 spt=36328 dpt=445 proto=TCP act=blocked rt=1789649872000
+CEF:0|Vendor|SecureAppliance|2.4|980|Port scan detected|6|src=198.18.7.41 dst=10.0.2.14 spt=35529 dpt=445 proto=TCP act=blocked rt=1789649879000
+CEF:0|Vendor|SecureAppliance|2.4|434|Port scan detected|4|src=198.18.7.41 dst=10.0.0.14 spt=16051 dpt=443 proto=TCP act=allowed rt=1789649886000
+CEF:0|Vendor|SecureAppliance|2.4|734|Malware blocked|10|src=198.18.7.41 dst=10.0.1.28 spt=21615 dpt=445 proto=TCP act=allowed rt=1789649893000
+CEF:0|Vendor|SecureAppliance|2.4|949|Malware blocked|7|src=198.18.7.41 dst=10.0.2.19 spt=50781 dpt=22 proto=TCP act=blocked rt=1789649900000
+CEF:0|Vendor|SecureAppliance|2.4|220|Malware blocked|7|src=45.83.64.12 dst=10.0.2.6 spt=55926 dpt=445 proto=TCP act=allowed rt=1789649907000
+CEF:0|Vendor|SecureAppliance|2.4|478|Policy violation|3|src=198.18.0.9 dst=10.0.0.13 spt=63619 dpt=22 proto=TCP act=allowed rt=1789649914000
+CEF:0|Vendor|SecureAppliance|2.4|332|Policy violation|6|src=45.83.64.12 dst=10.0.2.24 spt=5812 dpt=22 proto=TCP act=blocked rt=1789649921000
+CEF:0|Vendor|SecureAppliance|2.4|367|Malware blocked|4|src=45.83.64.12 dst=10.0.2.56 spt=40752 dpt=22 proto=TCP act=allowed rt=1789649928000
+CEF:0|Vendor|SecureAppliance|2.4|780|Malware blocked|3|src=198.18.7.41 dst=10.0.2.42 spt=34194 dpt=22 proto=TCP act=allowed rt=1789649935000
+CEF:0|Vendor|SecureAppliance|2.4|264|Port scan detected|10|src=198.18.7.41 dst=10.0.0.37 spt=27075 dpt=22 proto=TCP act=blocked rt=1789649942000
+CEF:0|Vendor|SecureAppliance|2.4|909|Malware blocked|6|src=198.18.7.41 dst=10.0.0.17 spt=38595 dpt=22 proto=TCP act=blocked rt=1789649949000
+CEF:0|Vendor|SecureAppliance|2.4|746|Port scan detected|8|src=198.18.0.9 dst=10.0.1.12 spt=60493 dpt=443 proto=TCP act=allowed rt=1789649956000
+CEF:0|Vendor|SecureAppliance|2.4|174|Malware blocked|6|src=45.83.64.12 dst=10.0.0.20 spt=61626 dpt=22 proto=TCP act=blocked rt=1789649963000
+CEF:0|Vendor|SecureAppliance|2.4|355|Policy violation|2|src=45.83.64.12 dst=10.0.2.24 spt=58897 dpt=443 proto=TCP act=blocked rt=1789649970000
+CEF:0|Vendor|SecureAppliance|2.4|652|Malware blocked|8|src=198.18.7.41 dst=10.0.2.13 spt=4189 dpt=445 proto=TCP act=allowed rt=1789649977000
+CEF:0|Vendor|SecureAppliance|2.4|775|Port scan detected|8|src=198.18.0.9 dst=10.0.0.10 spt=50225 dpt=443 proto=TCP act=allowed rt=1789649984000
+CEF:0|Vendor|SecureAppliance|2.4|138|Policy violation|8|src=198.18.7.41 dst=10.0.2.34 spt=10734 dpt=443 proto=TCP act=blocked rt=1789649991000
+CEF:0|Vendor|SecureAppliance|2.4|242|Policy violation|7|src=198.18.0.9 dst=10.0.1.36 spt=35830 dpt=443 proto=TCP act=allowed rt=1789649998000
+CEF:0|Vendor|SecureAppliance|2.4|511|Malware blocked|1|src=198.18.7.41 dst=10.0.2.19 spt=6418 dpt=22 proto=TCP act=allowed rt=1789650005000
+CEF:0|Vendor|SecureAppliance|2.4|923|Malware blocked|6|src=45.83.64.12 dst=10.0.2.21 spt=1035 dpt=443 proto=TCP act=blocked rt=1789650012000
+CEF:0|Vendor|SecureAppliance|2.4|775|Policy violation|5|src=198.18.0.9 dst=10.0.2.53 spt=56647 dpt=445 proto=TCP act=allowed rt=1789650019000
+CEF:0|Vendor|SecureAppliance|2.4|200|Malware blocked|7|src=198.18.0.9 dst=10.0.1.52 spt=36598 dpt=445 proto=TCP act=blocked rt=1789650026000
+CEF:0|Vendor|SecureAppliance|2.4|270|Port scan detected|1|src=45.83.64.12 dst=10.0.2.30 spt=34598 dpt=443 proto=TCP act=blocked rt=1789650033000
+CEF:0|Vendor|SecureAppliance|2.4|270|Port scan detected|6|src=45.83.64.12 dst=10.0.0.32 spt=33213 dpt=445 proto=TCP act=allowed rt=1789650040000
+CEF:0|Vendor|SecureAppliance|2.4|466|Port scan detected|6|src=198.18.7.41 dst=10.0.0.14 spt=38200 dpt=22 proto=TCP act=allowed rt=1789650047000
+CEF:0|Vendor|SecureAppliance|2.4|997|Malware blocked|5|src=198.18.7.41 dst=10.0.0.48 spt=11636 dpt=443 proto=TCP act=allowed rt=1789650054000
+CEF:0|Vendor|SecureAppliance|2.4|482|Port scan detected|6|src=45.83.64.12 dst=10.0.1.17 spt=13101 dpt=443 proto=TCP act=blocked rt=1789650061000
+CEF:0|Vendor|SecureAppliance|2.4|985|Port scan detected|2|src=45.83.64.12 dst=10.0.0.59 spt=44062 dpt=443 proto=TCP act=blocked rt=1789650068000
+CEF:0|Vendor|SecureAppliance|2.4|261|Policy violation|4|src=45.83.64.12 dst=10.0.0.14 spt=19118 dpt=22 proto=TCP act=allowed rt=1789650075000
+CEF:0|Vendor|SecureAppliance|2.4|440|Port scan detected|9|src=198.18.7.41 dst=10.0.1.44 spt=45551 dpt=443 proto=TCP act=allowed rt=1789650082000
+CEF:0|Vendor|SecureAppliance|2.4|586|Port scan detected|7|src=45.83.64.12 dst=10.0.1.51 spt=31773 dpt=22 proto=TCP act=allowed rt=1789650089000
+CEF:0|Vendor|SecureAppliance|2.4|120|Malware blocked|2|src=45.83.64.12 dst=10.0.2.20 spt=40067 dpt=443 proto=TCP act=blocked rt=1789650096000
+CEF:0|Vendor|SecureAppliance|2.4|336|Port scan detected|5|src=45.83.64.12 dst=10.0.2.28 spt=34363 dpt=22 proto=TCP act=allowed rt=1789650103000
+CEF:0|Vendor|SecureAppliance|2.4|230|Policy violation|10|src=198.18.7.41 dst=10.0.1.44 spt=48421 dpt=22 proto=TCP act=allowed rt=1789650110000
+CEF:0|Vendor|SecureAppliance|2.4|220|Malware blocked|2|src=198.18.0.9 dst=10.0.1.15 spt=10336 dpt=445 proto=TCP act=allowed rt=1789650117000
+CEF:0|Vendor|SecureAppliance|2.4|250|Malware blocked|9|src=198.18.7.41 dst=10.0.2.37 spt=58167 dpt=22 proto=TCP act=blocked rt=1789650124000
+CEF:0|Vendor|SecureAppliance|2.4|161|Port scan detected|5|src=198.18.7.41 dst=10.0.2.12 spt=15179 dpt=22 proto=TCP act=allowed rt=1789650131000
+CEF:0|Vendor|SecureAppliance|2.4|730|Malware blocked|8|src=198.18.7.41 dst=10.0.1.12 spt=44920 dpt=445 proto=TCP act=blocked rt=1789650138000
+CEF:0|Vendor|SecureAppliance|2.4|889|Policy violation|2|src=45.83.64.12 dst=10.0.2.59 spt=4399 dpt=443 proto=TCP act=blocked rt=1789650145000
+CEF:0|Vendor|SecureAppliance|2.4|238|Port scan detected|4|src=45.83.64.12 dst=10.0.1.5 spt=37863 dpt=443 proto=TCP act=allowed rt=1789650152000
+CEF:0|Vendor|SecureAppliance|2.4|324|Port scan detected|4|src=198.18.0.9 dst=10.0.0.10 spt=23460 dpt=443 proto=TCP act=blocked rt=1789650159000
+CEF:0|Vendor|SecureAppliance|2.4|591|Port scan detected|3|src=198.18.0.9 dst=10.0.0.32 spt=65381 dpt=22 proto=TCP act=blocked rt=1789650166000
+CEF:0|Vendor|SecureAppliance|2.4|208|Malware blocked|2|src=45.83.64.12 dst=10.0.1.43 spt=46600 dpt=22 proto=TCP act=allowed rt=1789650173000
+CEF:0|Vendor|SecureAppliance|2.4|179|Policy violation|1|src=45.83.64.12 dst=10.0.0.39 spt=11492 dpt=22 proto=TCP act=blocked rt=1789650180000
+CEF:0|Vendor|SecureAppliance|2.4|547|Policy violation|5|src=198.18.0.9 dst=10.0.2.57 spt=37477 dpt=22 proto=TCP act=blocked rt=1789650187000
+CEF:0|Vendor|SecureAppliance|2.4|781|Malware blocked|9|src=45.83.64.12 dst=10.0.0.6 spt=64599 dpt=445 proto=TCP act=blocked rt=1789650194000
+CEF:0|Vendor|SecureAppliance|2.4|436|Policy violation|2|src=198.18.0.9 dst=10.0.0.32 spt=63353 dpt=443 proto=TCP act=blocked rt=1789650201000
+CEF:0|Vendor|SecureAppliance|2.4|173|Policy violation|8|src=198.18.0.9 dst=10.0.0.29 spt=47562 dpt=22 proto=TCP act=allowed rt=1789650208000
+CEF:0|Vendor|SecureAppliance|2.4|509|Policy violation|8|src=198.18.0.9 dst=10.0.2.33 spt=4353 dpt=443 proto=TCP act=blocked rt=1789650215000
+CEF:0|Vendor|SecureAppliance|2.4|453|Policy violation|10|src=198.18.7.41 dst=10.0.0.44 spt=28746 dpt=22 proto=TCP act=blocked rt=1789650222000
+CEF:0|Vendor|SecureAppliance|2.4|492|Port scan detected|9|src=198.18.0.9 dst=10.0.0.50 spt=32890 dpt=443 proto=TCP act=blocked rt=1789650229000
+CEF:0|Vendor|SecureAppliance|2.4|652|Malware blocked|1|src=198.18.7.41 dst=10.0.0.31 spt=14690 dpt=445 proto=TCP act=blocked rt=1789650236000
+CEF:0|Vendor|SecureAppliance|2.4|565|Malware blocked|9|src=45.83.64.12 dst=10.0.2.5 spt=60880 dpt=445 proto=TCP act=allowed rt=1789650243000
+CEF:0|Vendor|SecureAppliance|2.4|281|Malware blocked|7|src=45.83.64.12 dst=10.0.0.52 spt=29473 dpt=443 proto=TCP act=blocked rt=1789650250000
+CEF:0|Vendor|SecureAppliance|2.4|305|Policy violation|1|src=45.83.64.12 dst=10.0.0.38 spt=13359 dpt=443 proto=TCP act=blocked rt=1789650257000
+CEF:0|Vendor|SecureAppliance|2.4|902|Port scan detected|9|src=198.18.7.41 dst=10.0.2.5 spt=4709 dpt=445 proto=TCP act=allowed rt=1789650264000
+CEF:0|Vendor|SecureAppliance|2.4|814|Malware blocked|2|src=198.18.0.9 dst=10.0.0.24 spt=46738 dpt=445 proto=TCP act=allowed rt=1789650271000
+CEF:0|Vendor|SecureAppliance|2.4|904|Malware blocked|4|src=45.83.64.12 dst=10.0.2.44 spt=35972 dpt=22 proto=TCP act=blocked rt=1789650278000
+CEF:0|Vendor|SecureAppliance|2.4|163|Port scan detected|9|src=198.18.0.9 dst=10.0.1.27 spt=39349 dpt=445 proto=TCP act=blocked rt=1789650285000
+CEF:0|Vendor|SecureAppliance|2.4|367|Malware blocked|5|src=198.18.0.9 dst=10.0.0.55 spt=7381 dpt=22 proto=TCP act=blocked rt=1789650292000
+CEF:0|Vendor|SecureAppliance|2.4|983|Malware blocked|10|src=198.18.7.41 dst=10.0.2.22 spt=31249 dpt=445 proto=TCP act=blocked rt=1789650299000
+CEF:0|Vendor|SecureAppliance|2.4|693|Malware blocked|9|src=45.83.64.12 dst=10.0.0.27 spt=8379 dpt=443 proto=TCP act=blocked rt=1789650306000
+CEF:0|Vendor|SecureAppliance|2.4|368|Policy violation|9|src=198.18.7.41 dst=10.0.0.36 spt=31517 dpt=445 proto=TCP act=allowed rt=1789650313000
+CEF:0|Vendor|SecureAppliance|2.4|562|Malware blocked|8|src=198.18.0.9 dst=10.0.1.59 spt=47039 dpt=443 proto=TCP act=blocked rt=1789650320000
+CEF:0|Vendor|SecureAppliance|2.4|714|Port scan detected|2|src=198.18.0.9 dst=10.0.2.15 spt=9931 dpt=445 proto=TCP act=blocked rt=1789650327000
+CEF:0|Vendor|SecureAppliance|2.4|621|Malware blocked|1|src=198.18.0.9 dst=10.0.2.32 spt=22457 dpt=22 proto=TCP act=allowed rt=1789650334000
+CEF:0|Vendor|SecureAppliance|2.4|892|Policy violation|5|src=198.18.7.41 dst=10.0.2.29 spt=23519 dpt=445 proto=TCP act=allowed rt=1789650341000
+CEF:0|Vendor|SecureAppliance|2.4|191|Policy violation|6|src=198.18.0.9 dst=10.0.1.49 spt=16273 dpt=445 proto=TCP act=blocked rt=1789650348000
+CEF:0|Vendor|SecureAppliance|2.4|766|Port scan detected|4|src=45.83.64.12 dst=10.0.2.28 spt=29307 dpt=22 proto=TCP act=blocked rt=1789650355000
+CEF:0|Vendor|SecureAppliance|2.4|760|Port scan detected|6|src=45.83.64.12 dst=10.0.0.14 spt=60803 dpt=443 proto=TCP act=allowed rt=1789650362000
+CEF:0|Vendor|SecureAppliance|2.4|400|Port scan detected|10|src=198.18.7.41 dst=10.0.1.52 spt=32270 dpt=445 proto=TCP act=blocked rt=1789650369000
+CEF:0|Vendor|SecureAppliance|2.4|891|Malware blocked|7|src=198.18.0.9 dst=10.0.0.33 spt=5056 dpt=443 proto=TCP act=allowed rt=1789650376000
+CEF:0|Vendor|SecureAppliance|2.4|547|Port scan detected|5|src=198.18.7.41 dst=10.0.2.50 spt=56856 dpt=443 proto=TCP act=allowed rt=1789650383000
+CEF:0|Vendor|SecureAppliance|2.4|310|Policy violation|2|src=198.18.7.41 dst=10.0.2.20 spt=49530 dpt=22 proto=TCP act=allowed rt=1789650390000
+CEF:0|Vendor|SecureAppliance|2.4|186|Malware blocked|1|src=198.18.7.41 dst=10.0.1.45 spt=18029 dpt=445 proto=TCP act=allowed rt=1789650397000
+CEF:0|Vendor|SecureAppliance|2.4|544|Port scan detected|6|src=198.18.7.41 dst=10.0.0.57 spt=61313 dpt=443 proto=TCP act=blocked rt=1789650404000
+CEF:0|Vendor|SecureAppliance|2.4|193|Policy violation|4|src=45.83.64.12 dst=10.0.1.11 spt=32867 dpt=443 proto=TCP act=blocked rt=1789650411000
+CEF:0|Vendor|SecureAppliance|2.4|454|Policy violation|1|src=45.83.64.12 dst=10.0.0.49 spt=63381 dpt=443 proto=TCP act=allowed rt=1789650418000
+CEF:0|Vendor|SecureAppliance|2.4|456|Malware blocked|8|src=45.83.64.12 dst=10.0.2.35 spt=15720 dpt=445 proto=TCP act=allowed rt=1789650425000
+CEF:0|Vendor|SecureAppliance|2.4|167|Policy violation|3|src=198.18.7.41 dst=10.0.1.58 spt=37628 dpt=445 proto=TCP act=blocked rt=1789650432000
+CEF:0|Vendor|SecureAppliance|2.4|309|Malware blocked|3|src=198.18.0.9 dst=10.0.2.25 spt=60845 dpt=443 proto=TCP act=allowed rt=1789650439000
+CEF:0|Vendor|SecureAppliance|2.4|240|Policy violation|1|src=198.18.7.41 dst=10.0.0.45 spt=11429 dpt=443 proto=TCP act=allowed rt=1789650446000
+CEF:0|Vendor|SecureAppliance|2.4|313|Policy violation|8|src=198.18.7.41 dst=10.0.0.51 spt=61978 dpt=22 proto=TCP act=blocked rt=1789650453000
+CEF:0|Vendor|SecureAppliance|2.4|412|Policy violation|3|src=198.18.7.41 dst=10.0.1.50 spt=17278 dpt=443 proto=TCP act=blocked rt=1789650460000
+CEF:0|Vendor|SecureAppliance|2.4|295|Port scan detected|2|src=198.18.0.9 dst=10.0.2.34 spt=37402 dpt=445 proto=TCP act=allowed rt=1789650467000
+CEF:0|Vendor|SecureAppliance|2.4|435|Malware blocked|7|src=198.18.0.9 dst=10.0.1.18 spt=7252 dpt=445 proto=TCP act=blocked rt=1789650474000
+CEF:0|Vendor|SecureAppliance|2.4|479|Malware blocked|7|src=45.83.64.12 dst=10.0.0.34 spt=33930 dpt=22 proto=TCP act=allowed rt=1789650481000
+CEF:0|Vendor|SecureAppliance|2.4|887|Policy violation|7|src=45.83.64.12 dst=10.0.0.6 spt=3124 dpt=443 proto=TCP act=blocked rt=1789650488000
+CEF:0|Vendor|SecureAppliance|2.4|352|Malware blocked|8|src=198.18.7.41 dst=10.0.0.32 spt=13026 dpt=445 proto=TCP act=allowed rt=1789650495000
+CEF:0|Vendor|SecureAppliance|2.4|386|Malware blocked|3|src=198.18.7.41 dst=10.0.0.26 spt=42370 dpt=22 proto=TCP act=allowed rt=1789650502000
+CEF:0|Vendor|SecureAppliance|2.4|633|Policy violation|4|src=45.83.64.12 dst=10.0.1.5 spt=38798 dpt=443 proto=TCP act=blocked rt=1789650509000
+CEF:0|Vendor|SecureAppliance|2.4|303|Policy violation|10|src=45.83.64.12 dst=10.0.1.9 spt=16887 dpt=22 proto=TCP act=allowed rt=1789650516000
+CEF:0|Vendor|SecureAppliance|2.4|578|Port scan detected|5|src=198.18.0.9 dst=10.0.1.56 spt=18107 dpt=443 proto=TCP act=allowed rt=1789650523000
+CEF:0|Vendor|SecureAppliance|2.4|711|Malware blocked|6|src=198.18.7.41 dst=10.0.1.26 spt=22940 dpt=22 proto=TCP act=blocked rt=1789650530000
+CEF:0|Vendor|SecureAppliance|2.4|259|Malware blocked|3|src=198.18.7.41 dst=10.0.0.32 spt=25631 dpt=443 proto=TCP act=allowed rt=1789650537000
+CEF:0|Vendor|SecureAppliance|2.4|853|Port scan detected|2|src=198.18.0.9 dst=10.0.2.13 spt=29960 dpt=22 proto=TCP act=allowed rt=1789650544000
+CEF:0|Vendor|SecureAppliance|2.4|620|Policy violation|4|src=45.83.64.12 dst=10.0.0.22 spt=14654 dpt=443 proto=TCP act=blocked rt=1789650551000
+CEF:0|Vendor|SecureAppliance|2.4|543|Malware blocked|1|src=198.18.0.9 dst=10.0.0.29 spt=53034 dpt=443 proto=TCP act=allowed rt=1789650558000
+CEF:0|Vendor|SecureAppliance|2.4|772|Port scan detected|5|src=45.83.64.12 dst=10.0.0.49 spt=59676 dpt=22 proto=TCP act=allowed rt=1789650565000
+CEF:0|Vendor|SecureAppliance|2.4|165|Port scan detected|10|src=198.18.0.9 dst=10.0.2.57 spt=60240 dpt=443 proto=TCP act=allowed rt=1789650572000
+CEF:0|Vendor|SecureAppliance|2.4|496|Port scan detected|5|src=198.18.0.9 dst=10.0.2.47 spt=50021 dpt=445 proto=TCP act=blocked rt=1789650579000
+CEF:0|Vendor|SecureAppliance|2.4|139|Malware blocked|2|src=45.83.64.12 dst=10.0.0.22 spt=43053 dpt=22 proto=TCP act=blocked rt=1789650586000
+CEF:0|Vendor|SecureAppliance|2.4|821|Port scan detected|9|src=198.18.7.41 dst=10.0.0.41 spt=14160 dpt=22 proto=TCP act=blocked rt=1789650593000
+CEF:0|Vendor|SecureAppliance|2.4|799|Malware blocked|5|src=45.83.64.12 dst=10.0.1.46 spt=9683 dpt=22 proto=TCP act=allowed rt=1789650600000

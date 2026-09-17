@@ -49,6 +49,11 @@ def iso8601(value: Any) -> int:
     normalised = re.sub(r"([+-]\d{2})(\d{2})$", r"\1:\2", text)
     if normalised.endswith("Z"):
         normalised = normalised[:-1] + "+00:00"
+    # datetime.fromisoformat accepts at most 6 fractional digits on 3.10, but
+    # Windows Event Log writes 100-nanosecond precision (7 digits) and several
+    # agents write 9. Truncating rather than rejecting keeps millisecond
+    # accuracy, which is all the OCSF timestamp field stores anyway.
+    normalised = re.sub(r"\.(\d{6})\d+", r".\1", normalised)
     try:
         dt = datetime.fromisoformat(normalised)
     except ValueError:
@@ -196,7 +201,51 @@ TCP_STATE_ACTIVITY = {
     "CloseWait": 2, "SynSent": 1, "Closed": 2,
 }
 
+# IANA protocol names to numbers, as OCSF's connection_info.protocol_num wants.
+# Netfilter and several appliances log the name; OCSF stores the number.
+PROTO_NUMBER = {
+    "ICMP": 1, "IGMP": 2, "TCP": 6, "UDP": 17, "GRE": 47,
+    "ESP": 50, "AH": 51, "ICMPV6": 58, "SCTP": 132,
+}
+
+# Zeek conn_state to OCSF disposition. S0/REJ/RSTO mean the connection never
+# established or was refused.
+ZEEK_DISPOSITION = {
+    "SF": 1, "S1": 1, "S2": 1, "S3": 1, "OTH": 1,
+    "REJ": 2, "S0": 2, "RSTO": 2, "RSTR": 2, "RSTOS0": 2, "RSTRH": 2,
+}
+
+# Postfix / mail delivery outcome to OCSF disposition.
+MAIL_DISPOSITION = {"sent": 1, "deferred": 3, "bounced": 2, "reject": 2}
+
+# nginx error levels to OCSF severity.
+NGINX_LEVEL = {
+    "debug": 1, "info": 1, "notice": 1, "warn": 3,
+    "error": 4, "crit": 5, "alert": 5, "emerg": 6,
+}
+
+# auditd res= outcome. OCSF status_id: 1 Success, 2 Failure.
+AUDIT_RESULT_STATUS = {"success": 1, "failed": 2, "yes": 1, "no": 2}
+AUDIT_RESULT_SEVERITY = {"success": 1, "failed": 3, "yes": 1, "no": 3}
+
+# OCSF auth_protocol_id for the SSH methods OpenSSH names in its log line.
+SSH_AUTH_METHOD = {"password": 1, "publickey": 8, "keyboard-interactive": 1}
+
+# CEF and LEEF both use a 0-10 severity scale; OCSF uses 0-6.
+CEF_SEVERITY = {
+    "0": 1, "1": 1, "2": 1, "3": 2, "4": 2,
+    "5": 3, "6": 3, "7": 4, "8": 4, "9": 5, "10": 6,
+}
+
 LOOKUPS: dict[str, dict[str, Any]] = {
+    "cef_severity": CEF_SEVERITY,
+    "proto_number": PROTO_NUMBER,
+    "nginx_level": NGINX_LEVEL,
+    "audit_result_status": AUDIT_RESULT_STATUS,
+    "audit_result_severity": AUDIT_RESULT_SEVERITY,
+    "ssh_auth_method": SSH_AUTH_METHOD,
+    "zeek_disposition": ZEEK_DISPOSITION,
+    "mail_disposition": MAIL_DISPOSITION,
     "suricata_severity": SURICATA_SEVERITY,
     "http_method_activity": HTTP_METHOD_ACTIVITY,
     "firewall_disposition": FIREWALL_DISPOSITION,

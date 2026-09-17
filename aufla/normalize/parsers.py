@@ -19,7 +19,10 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-__all__ = ["ParseError", "ParsedEvent", "parse_body", "PARSERS"]
+__all__ = ["ParseError", "ParsedEvent", "parse_body", "PARSERS", "RAW_REF"]
+
+# Reserved name for the unparsed body: `$_raw` in a mapping.
+RAW_REF = "_raw"
 
 
 class ParseError(ValueError):
@@ -36,6 +39,11 @@ class ParsedEvent:
     positional: list[str] = field(default_factory=list)
     named: dict[str, Any] = field(default_factory=dict)
     format: str = "unknown"
+    # The whole body, before splitting. Free-text formats carry their values
+    # inside prose rather than in fields, so a regex has to run against the
+    # entire message; every format exposes it as `$_raw` so a mapping reaches
+    # it the same way regardless of how the body was parsed.
+    raw_body: str = ""
 
     def get_positional(self, index: int) -> Any:
         """1-indexed positional access. Out of range yields ``None``."""
@@ -50,6 +58,8 @@ class ParsedEvent:
         An exact key match wins over path traversal, because vendors do emit
         literal keys containing dots (``src.ip``).
         """
+        if path == RAW_REF:
+            return self.raw_body
         if path in self.named:
             return self.named[path]
 
@@ -147,6 +157,24 @@ def parse_json(body: str) -> ParsedEvent:
 
 
 def parse_xml(body: str) -> ParsedEvent:
+    """Parse XML, preserving repeated sibling elements.
+
+    Repeated siblings are the normal shape of real XML logs, not an edge case.
+    A Windows Security event carries every field it has as a repeated
+    ``<Data Name="TargetUserName">`` element, so a parser that writes each
+    sibling to the same path keeps only the last one and silently discards the
+    username, the address and everything else.
+
+    Three addressing forms are exposed for a repeated element:
+
+    ``EventData.Data.TargetUserName``
+        keyed by its ``Name`` attribute -- the idiomatic way to read Windows
+        events, and the only one that is stable when fields are reordered;
+    ``EventData.Data.0``
+        by position, for repeated elements that carry no identifying attribute;
+    ``EventData.Data``
+        the first occurrence, so a document with one child still reads simply.
+    """
     import xml.etree.ElementTree as ET
 
     try:
@@ -156,15 +184,39 @@ def parse_xml(body: str) -> ParsedEvent:
 
     named: dict[str, Any] = {}
 
+    def put(path: str, value: Any) -> None:
+        # First writer wins, so `EventData.Data` stays the first occurrence
+        # rather than being overwritten by the last.
+        if path not in named:
+            named[path] = value
+
     def walk(node, prefix: str) -> None:
         for key, value in node.attrib.items():
-            named[f"{prefix}.@{key}" if prefix else f"@{key}"] = value
+            put(f"{prefix}.@{key}" if prefix else f"@{key}", value)
         text = (node.text or "").strip()
         if text and prefix:
-            named[prefix] = text
+            put(prefix, text)
+
+        # Group children by tag so repeats can be indexed rather than collide.
+        buckets: dict[str, list[Any]] = {}
         for child in node:
             tag = child.tag.rsplit("}", 1)[-1]  # drop any namespace
-            walk(child, f"{prefix}.{tag}" if prefix else tag)
+            buckets.setdefault(tag, []).append(child)
+
+        for tag, children in buckets.items():
+            base = f"{prefix}.{tag}" if prefix else tag
+            for index, child in enumerate(children):
+                if len(children) > 1:
+                    walk(child, f"{base}.{index}")
+                    # A sibling identified by a Name attribute is addressable
+                    # by that name, which is how these documents are meant to
+                    # be read and survives the fields being reordered.
+                    label = child.attrib.get("Name") or child.attrib.get("name")
+                    if label:
+                        inner = (child.text or "").strip()
+                        if inner:
+                            put(f"{base}.{label}", inner)
+                walk(child, base)
 
     walk(root, "")
     return ParsedEvent(named=named, format="xml")
@@ -264,7 +316,20 @@ def parse_leef(body: str) -> ParsedEvent:
     )
 
 
+def parse_raw(body: str) -> ParsedEvent:
+    """No structure at all: the body is the field.
+
+    For sources whose every value lives inside prose -- Cisco ASA, OpenSSH,
+    MikroTik -- where splitting buys nothing and each field is reached by its
+    own regex instead.
+    """
+    if not body.strip():
+        raise ParseError("empty body")
+    return ParsedEvent(positional=[body], named={}, format="raw")
+
+
 PARSERS = {
+    "raw": parse_raw,
     "csv": parse_csv,
     "ssv": parse_ssv,
     "tsv": parse_tsv,
@@ -284,4 +349,6 @@ def parse_body(body: str, fmt: str) -> ParsedEvent:
         raise ParseError(
             f"no parser for format {fmt!r}; known: {', '.join(sorted(PARSERS))}"
         )
-    return parser(body)
+    parsed = parser(body)
+    parsed.raw_body = body
+    return parsed

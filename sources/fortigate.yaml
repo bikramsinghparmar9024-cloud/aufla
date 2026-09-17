@@ -1,0 +1,34 @@
+# FortiGate FortiOS logs.
+#
+# FortiOS is natively key=value with quoted string values, so it needs no
+# inference at all -- the key-value parser reads it directly. Worth noting in
+# the pitch: a format like this never reaches the discovery lane, because
+# there is nothing to discover.
+source: fortigate
+format: kv
+ocsf_version: "1.5.0"
+version: 1
+description: FortiGate traffic logs.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: traffic
+    match: { field: $type, equals: "traffic" }
+    ocsf_class: 4001
+    fields:
+      src_endpoint.ip: $srcip
+      src_endpoint.port: $srcport
+      dst_endpoint.ip: $dstip
+      dst_endpoint.port: $dstport
+      connection_info.protocol_num: $proto
+      traffic.bytes_out: $sentbyte
+      traffic.bytes_in: $rcvdbyte
+      traffic.packets: $sentpkt
+      disposition_id: { from: $action, lookup: firewall_disposition, default: 0 }
+      activity_id: 6
+      severity_id: 1
+      metadata.product.name: FortiOS
+      metadata.product.vendor_name: Fortinet
+      metadata.log_name: traffic

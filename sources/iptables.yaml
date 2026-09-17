@@ -1,0 +1,48 @@
+# iptables / nftables kernel log messages.
+#
+# The kernel logs these as key=value pairs after a free-text prefix set by the
+# --log-prefix flag, e.g.:
+#   kernel: [12345.67] IPTables-Dropped: IN=eth0 OUT= MAC=... SRC=10.0.0.5 ...
+#
+# Key-value is the native shape, so no inference is needed. SPT/DPT are absent
+# on non-TCP/UDP protocols, which is why they carry no default.
+source: iptables
+format: kv
+ocsf_version: "1.5.0"
+version: 1
+description: Linux netfilter packet filter decisions.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: dropped
+    match: { field: $_raw, contains: "Dropped" }
+    ocsf_class: 4001
+    fields:
+      src_endpoint.ip: $SRC
+      dst_endpoint.ip: $DST
+      src_endpoint.port: $SPT
+      dst_endpoint.port: $DPT
+      connection_info.protocol_num: { from: $PROTO, lookup: proto_number }
+      traffic.bytes: $LEN
+      disposition_id: 2          # Blocked
+      activity_id: 6
+      severity_id: 3
+      metadata.product.name: netfilter
+      metadata.log_name: kernel
+
+  - name: accepted
+    ocsf_class: 4001
+    fields:
+      src_endpoint.ip: $SRC
+      dst_endpoint.ip: $DST
+      src_endpoint.port: $SPT
+      dst_endpoint.port: $DPT
+      connection_info.protocol_num: { from: $PROTO, lookup: proto_number }
+      traffic.bytes: $LEN
+      disposition_id: 1          # Allowed
+      activity_id: 6
+      severity_id: 1
+      metadata.product.name: netfilter
+      metadata.log_name: kernel

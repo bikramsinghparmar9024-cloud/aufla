@@ -1,0 +1,60 @@
+# Cisco ASA syslog.
+#
+#   %ASA-6-302013: Built outbound TCP connection 12345 for
+#   outside:203.0.113.9/443 (203.0.113.9/443) to inside:10.0.0.5/51000 (...)
+#   %ASA-4-106023: Deny tcp src outside:198.18.0.9/40000 dst inside:10.0.0.5/22
+#
+# ASA prints prose whose field order differs per message ID, so each message ID
+# gets its own rule with its own patterns.
+#
+# Note 302013 lists the *outside* peer first and the inside host second, while
+# 106023 lists src before dst. One generic rule would silently invert source
+# and destination on half the traffic -- which is exactly the class of error
+# the semantic checks flag, and better avoided than detected.
+source: cisco_asa
+format: raw
+ocsf_version: "1.5.0"
+version: 1
+description: Cisco ASA connection and deny messages.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: denied
+    match: { field: $_raw, contains: "%ASA-4-106023" }
+    ocsf_class: 4001
+    fields:
+      src_endpoint.ip: { from: $_raw, regex: "src \\w+:([0-9a-fA-F:.]+)/" }
+      src_endpoint.port: { from: $_raw, regex: "src \\w+:[0-9a-fA-F:.]+/(\\d+)" }
+      dst_endpoint.ip: { from: $_raw, regex: "dst \\w+:([0-9a-fA-F:.]+)/" }
+      dst_endpoint.port: { from: $_raw, regex: "dst \\w+:[0-9a-fA-F:.]+/(\\d+)" }
+      connection_info.protocol_num:
+        from: $_raw
+        regex: "Deny (\\w+) src"
+        lookup: proto_number
+        default: 6
+      disposition_id: 2
+      activity_id: 6
+      severity_id: 3
+      metadata.product.name: ASA
+      metadata.product.vendor_name: Cisco
+      metadata.log_name: asa
+
+  - name: built
+    match: { field: $_raw, contains: "%ASA-6-302013" }
+    ocsf_class: 4001
+    fields:
+      # 302013 prints the far side first ("for outside:...") and the internal
+      # host after ("to inside:..."), so src and dst are read accordingly.
+      dst_endpoint.ip: { from: $_raw, regex: "for \\w+:([0-9a-fA-F:.]+)/" }
+      dst_endpoint.port: { from: $_raw, regex: "for \\w+:[0-9a-fA-F:.]+/(\\d+)" }
+      src_endpoint.ip: { from: $_raw, regex: "to \\w+:([0-9a-fA-F:.]+)/" }
+      src_endpoint.port: { from: $_raw, regex: "to \\w+:[0-9a-fA-F:.]+/(\\d+)" }
+      connection_info.protocol_num: 6
+      disposition_id: 1
+      activity_id: 6
+      severity_id: 1
+      metadata.product.name: ASA
+      metadata.product.vendor_name: Cisco
+      metadata.log_name: asa

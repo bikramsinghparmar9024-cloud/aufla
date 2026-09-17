@@ -1,0 +1,27 @@
+# Nginx error log.
+#
+#   2026/09/17 13:55:36 [error] 1234#0: *42 open() "/usr/share/nginx/html/x"
+#   failed (2: No such file or directory), client: 10.0.0.5, server: _, ...
+#
+# Free text with a few reliably-placed values. Mapped to Detection Finding
+# because an nginx error is a finding about a request, not traffic telemetry.
+source: nginx_error
+format: raw
+ocsf_version: "1.5.0"
+version: 1
+description: Nginx error log entries.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: error
+    ocsf_class: 2004
+    fields:
+      src_endpoint.ip: { from: $_raw, regex: 'client: ([0-9a-fA-F:.]+)' }
+      finding_info.title: { from: $_raw, regex: '\[(\w+)\]' }
+      finding_info.desc: { from: $_raw, regex: '\d+#\d+: (.+?)(?:, client:|$)' }
+      severity_id: { from: $_raw, regex: '\[(\w+)\]', lookup: nginx_level, default: 3 }
+      activity_id: 1
+      metadata.product.name: nginx
+      metadata.log_name: error.log

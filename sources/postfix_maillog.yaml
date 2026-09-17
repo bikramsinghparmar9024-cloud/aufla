@@ -1,0 +1,40 @@
+# Postfix mail log.
+#
+#   Sep 17 13:55:36 mail postfix/smtpd[1234]: NOQUEUE: reject: RCPT from
+#   unknown[198.18.0.9]: 554 5.7.1 <spam@x.test>: Relay access denied;
+#   from=<a@b.test> to=<c@d.test> proto=ESMTP helo=<x>
+#
+# A rejected relay attempt is a security finding; an ordinary delivery is not,
+# which is why the two rules land in different OCSF classes.
+source: postfix_maillog
+format: raw
+ocsf_version: "1.5.0"
+version: 1
+description: Postfix mail transfer events.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: reject
+    match: { field: $_raw, contains: "reject:" }
+    ocsf_class: 2004
+    fields:
+      src_endpoint.ip: { from: $_raw, regex: '\[([0-9a-fA-F:.]+)\]' }
+      finding_info.title: { from: $_raw, regex: 'reject: (\w+)' }
+      finding_info.desc: { from: $_raw, regex: '\d{3} [\d.]+ (.+?);' }
+      user.email_addr: { from: $_raw, regex: 'from=<([^>]+)>' }
+      severity_id: 3
+      activity_id: 1
+      metadata.product.name: Postfix
+      metadata.log_name: maillog
+
+  - name: delivery
+    ocsf_class: 2004
+    fields:
+      finding_info.title: { from: $_raw, regex: 'status=(\w+)' }
+      user.email_addr: { from: $_raw, regex: 'to=<([^>]+)>' }
+      severity_id: 1
+      activity_id: 1
+      metadata.product.name: Postfix
+      metadata.log_name: maillog

@@ -1,0 +1,56 @@
+# Windows Security channel, EVTX exported as XML.
+#
+# Security events carry every field as a repeated <Data Name="..."> element.
+# They are addressed here by name (EventData.Data.TargetUserName) rather than
+# by position, so the mapping survives Microsoft reordering fields between
+# builds -- and so a reader can tell what the mapping means without counting.
+#
+# 4624/4625 are the two events that matter most for authentication monitoring,
+# and unlike the System/Application channel they map to OCSF Authentication
+# exactly rather than being forced into a generic finding.
+#
+# Reading this channel needs elevation, which is why live collection does not
+# attempt it; these are replayed from an export instead.
+source: windows_security
+format: xml
+ocsf_version: "1.5.0"
+version: 1
+description: Windows Security logon successes and failures.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: logon_failed
+    match: { field: $System.EventID, equals: "4625" }
+    ocsf_class: 3002
+    fields:
+      time: { from: $System.TimeCreated.@SystemTime, transform: iso8601 }
+      user.name: $EventData.Data.TargetUserName
+      user.domain: $EventData.Data.TargetDomainName
+      src_endpoint.ip: $EventData.Data.IpAddress
+      src_endpoint.port: $EventData.Data.IpPort
+      logon_type_id: $EventData.Data.LogonType
+      status_id: 2               # Failure
+      activity_id: 1
+      severity_id: 3
+      metadata.log_name: $System.Channel
+      metadata.product.name: Windows Security
+      metadata.product.vendor_name: Microsoft
+
+  - name: logon_success
+    match: { field: $System.EventID, equals: "4624" }
+    ocsf_class: 3002
+    fields:
+      time: { from: $System.TimeCreated.@SystemTime, transform: iso8601 }
+      user.name: $EventData.Data.TargetUserName
+      user.domain: $EventData.Data.TargetDomainName
+      src_endpoint.ip: $EventData.Data.IpAddress
+      src_endpoint.port: $EventData.Data.IpPort
+      logon_type_id: $EventData.Data.LogonType
+      status_id: 1               # Success
+      activity_id: 1
+      severity_id: 1
+      metadata.log_name: $System.Channel
+      metadata.product.name: Windows Security
+      metadata.product.vendor_name: Microsoft

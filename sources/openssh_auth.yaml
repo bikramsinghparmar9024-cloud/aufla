@@ -1,0 +1,63 @@
+# OpenSSH authentication log.
+#
+#   Failed password for invalid user admin from 198.18.0.9 port 51042 ssh2
+#   Accepted publickey for deploy from 10.0.0.31 port 44120 ssh2: RSA SHA256:...
+#
+# Prose with embedded values, so every field is reached by its own regex. The
+# "invalid user" variant is optional in the pattern because OpenSSH inserts it
+# only for accounts that do not exist -- a detail worth getting right, since
+# those are exactly the lines an analyst cares about during a brute-force.
+source: openssh_auth
+format: raw
+ocsf_version: "1.5.0"
+version: 1
+description: OpenSSH logins, successful and failed.
+author: human
+approved_by: reference-mapping
+approved_at: "2026-09-17"
+
+rules:
+  - name: failed
+    match: { field: $_raw, contains: "Failed password" }
+    ocsf_class: 3002
+    fields:
+      user.name: { from: $_raw, regex: 'for (?:invalid user )?(\S+) from' }
+      src_endpoint.ip: { from: $_raw, regex: 'from ([0-9a-fA-F:.]+) port' }
+      src_endpoint.port: { from: $_raw, regex: 'port (\d+)' }
+      status_id: 2               # Failure
+      activity_id: 1             # Logon
+      severity_id: 3
+      metadata.product.name: OpenSSH
+      metadata.log_name: auth.log
+
+  - name: preauth_disconnect
+    # "Connection closed by authenticating user root 1.2.3.4 port N [preauth]"
+    # is neither a success nor a password failure, so neither rule above
+    # matches it -- yet it is one of the clearest brute-force signatures there
+    # is. Without this rule roughly a quarter of a real auth.log falls through
+    # to quarantine.
+    match: { field: $_raw, contains: "[preauth]" }
+    ocsf_class: 3002
+    fields:
+      user.name: { from: $_raw, regex: 'authenticating user (\S+)' }
+      src_endpoint.ip: { from: $_raw, regex: '([0-9a-fA-F:.]+) port \d+' }
+      src_endpoint.port: { from: $_raw, regex: 'port (\d+)' }
+      status_id: 2               # Failure
+      activity_id: 1
+      severity_id: 3
+      metadata.product.name: OpenSSH
+      metadata.log_name: auth.log
+
+  - name: accepted
+    match: { field: $_raw, contains: "Accepted" }
+    ocsf_class: 3002
+    fields:
+      user.name: { from: $_raw, regex: 'for (\S+) from' }
+      src_endpoint.ip: { from: $_raw, regex: 'from ([0-9a-fA-F:.]+) port' }
+      src_endpoint.port: { from: $_raw, regex: 'port (\d+)' }
+      auth_protocol_id: { from: $_raw, regex: 'Accepted (\w+)', lookup: ssh_auth_method, default: 0 }
+      status_id: 1               # Success
+      activity_id: 1
+      severity_id: 1
+      metadata.product.name: OpenSSH
+      metadata.log_name: auth.log
