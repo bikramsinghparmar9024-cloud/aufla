@@ -55,6 +55,13 @@ __all__ = ["build_server", "serve", "ForensicHandler"]
 
 STATIC = Path(__file__).parent / "index.html"
 
+# Windows the Overview can be scoped to. "all" is absent on purpose: an
+# unbounded window is the default only when explicitly chosen.
+RANGES: dict[str, int] = {
+    "15m": 900, "1h": 3600, "6h": 21600, "24h": 86400, "7d": 604800,
+}
+DEFAULT_RANGE = "1h"
+
 SEVERITY_NAMES = {
     0: "Unknown", 1: "Informational", 2: "Low", 3: "Medium",
     4: "High", 5: "Critical", 6: "Fatal",
@@ -168,7 +175,7 @@ class ForensicHandler(BaseHTTPRequestHandler):
                 if route == "/api/stats":
                     self._json(self._stats(store, ledger))
                 elif route == "/api/overview":
-                    self._json(self._overview(store, ledger))
+                    self._json(self._overview(store, ledger, query))
                 elif route == "/api/events":
                     self._json(self._events(store, query))
                 elif route.startswith("/api/event/"):
@@ -197,8 +204,22 @@ class ForensicHandler(BaseHTTPRequestHandler):
             "mappings": len(self.registry),
         }
 
-    def _overview(self, store, ledger) -> dict[str, Any]:
-        """Aggregations for the dashboard charts, computed in one pass."""
+    def _overview(self, store, ledger, query) -> dict[str, Any]:
+        """Aggregations for the dashboard charts, computed in one pass.
+
+        Scoped to a time window. Seeded history and live capture arrive at very
+        different rates, so a single all-time axis flattens hours of detail
+        under one spike; the window is how an analyst gets back to the scale
+        they care about.
+        """
+        window = (query.get("range", [DEFAULT_RANGE])[0] or DEFAULT_RANGE).lower()
+        if window != "all" and window not in RANGES:
+            # An unrecognised window falls back to the default, not to
+            # unbounded. Quietly widening to everything on a typo is how a
+            # console ends up showing far more than the reader asked for.
+            window = DEFAULT_RANGE
+        seconds = RANGES.get(window)
+        since_ns = None if seconds is None else time.time_ns() - seconds * 1_000_000_000
         by_source: Counter[str] = Counter()
         by_status: Counter[str] = Counter()
         by_class: Counter[str] = Counter()
@@ -209,7 +230,7 @@ class ForensicHandler(BaseHTTPRequestHandler):
         coverage_sum = 0.0
         counted = 0
 
-        events = list(store.iter_events())
+        events = list(store.iter_events(since_ns=since_ns))
         # Bucket the observed window into ~40 columns so the timeline reads the
         # same whether it covers two minutes of live capture or a whole day.
         times = [e.received_at_ns // 1_000_000 for e in events]
@@ -265,6 +286,11 @@ class ForensicHandler(BaseHTTPRequestHandler):
         ]
 
         return {
+            "range": window,
+            "ranges": [*RANGES, "all"],
+            "event_count": len(events),
+            "window_from": lo or None,
+            "window_to": hi or None,
             "timeline": {"sources": sources, "bucket_ms": bucket_ms, "points": series},
             "by_source": by_source.most_common(),
             "by_status": dict(by_status),

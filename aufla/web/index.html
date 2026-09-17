@@ -133,6 +133,16 @@
   input[type=search] { min-width:230px; }
   .verdict { font:600 12.5px var(--mono); }
   .ok { color:var(--good); } .bad { color:var(--crit); }
+  /* segmented time-window control */
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; }
+  .seg button {
+    background:var(--surface); color:var(--ink-2); border:0; border-right:1px solid var(--line);
+    padding:6px 13px; font:500 12.5px var(--sans); cursor:pointer;
+  }
+  .seg button:last-child { border-right:0; }
+  .seg button:hover { background:var(--surface-2); color:var(--ink); }
+  .seg button.on { background:var(--s1); color:#06121f; font-weight:600; }
+
   /* live-follow control + new-row treatment */
   .follow {
     display:flex; align-items:center; gap:7px; padding:6px 11px; cursor:pointer;
@@ -194,6 +204,13 @@
   <section class="view on" id="v-overview">
     <div class="tiles" id="tiles"></div>
 
+    <div class="bar" style="margin-top:16px;margin-bottom:0">
+      <span class="lbl" style="margin:0">Window</span>
+      <div class="seg" id="ranges"></div>
+      <span class="grow"></span>
+      <span class="lbl" style="margin:0" id="range-note"></span>
+    </div>
+
     <div class="grid2">
       <div class="card">
         <h2>Events ingested over time <span class="note" id="tl-note"></span></h2>
@@ -201,22 +218,22 @@
         <div class="legend" id="tl-legend"></div>
       </div>
       <div class="card">
-        <h2>Normalisation outcome</h2>
+        <h2>Normalisation outcome <span class="note" id="n-out"></span></h2>
         <div class="pad" id="status-chart"></div>
       </div>
     </div>
 
     <div class="grid3">
       <div class="card">
-        <h2>Events by source</h2>
+        <h2>Events by source <span class="note" id="n-src"></span></h2>
         <div class="pad" id="source-chart"></div>
       </div>
       <div class="card">
-        <h2>OCSF class distribution</h2>
+        <h2>OCSF class distribution <span class="note" id="n-cls"></span></h2>
         <div class="pad" id="class-chart"></div>
       </div>
       <div class="card">
-        <h2>Top destinations</h2>
+        <h2>Top destinations <span class="note" id="n-dst"></span></h2>
         <div class="pad" id="talker-chart"></div>
       </div>
     </div>
@@ -443,8 +460,26 @@ function barList(el, rows, opt = {}) {
 
 /* ---------------- views ---------------- */
 
+// Default to the last hour: a console is read for what is happening now, and
+// an all-time axis buries hours of detail under whatever spiked most recently.
+let range = "1h";
+const RANGE_LABELS = {"15m":"15 min","1h":"1 hour","6h":"6 hours","24h":"24 hours","7d":"7 days","all":"All"};
+
 async function loadOverview() {
-  const [s, o] = await Promise.all([get("/api/stats"), get("/api/overview")]);
+  const [s, o] = await Promise.all([
+    get("/api/stats"),
+    get("/api/overview?range=" + encodeURIComponent(range)),
+  ]);
+
+  $("#ranges").innerHTML = (o.ranges || ["1h","all"]).map(r =>
+    `<button data-r="${r}" class="${r===o.range?"on":""}">${RANGE_LABELS[r]||r}</button>`).join("");
+  document.querySelectorAll("#ranges button").forEach(b =>
+    b.onclick = () => { range = b.dataset.r; loadOverview(); });
+
+  // The tiles are all-time totals; everything below is window-scoped, so say
+  // so rather than letting the two silently disagree.
+  $("#range-note").textContent =
+    `${o.event_count.toLocaleString()} of ${s.raw_events.toLocaleString()} events in this window`;
 
   $("#tiles").innerHTML = [
     ["Raw events", s.raw_events.toLocaleString(), "byte-exact, immutable"],
@@ -462,6 +497,11 @@ async function loadOverview() {
     [["Full","full"],["Partial","partial"],["Quarantined","quarantined"]]
       .filter(([,k]) => st[k]).map(([l,k]) => [l, st[k]]),
     {color: l => ({Full:"--good", Partial:"--warn", Quarantined:"--crit"})[l]});
+
+  ["n-src","n-cls","n-dst","n-out"].forEach(id => {
+    const e = document.getElementById(id);
+    if (e) e.textContent = "in " + (RANGE_LABELS[o.range] || o.range).toLowerCase();
+  });
 
   barList($("#source-chart"), o.by_source);
   barList($("#class-chart"), o.by_class);
