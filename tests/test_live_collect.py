@@ -205,7 +205,7 @@ def test_a_connection_is_recorded_once_not_once_per_poll(monkeypatch):
 
     assert live._connection_key(line) == live._connection_key(later)
 
-    seen: set[str] = set()
+    seen: dict[str, float] = {}
     monkeypatch.setattr(live, "collect_netconn", lambda: [line])
 
     class FakePipeline:
@@ -221,12 +221,75 @@ def test_a_connection_is_recorded_once_not_once_per_poll(monkeypatch):
             return R()
 
     p = FakePipeline()
-    live.collect_once(p, channels=(), seen_connections=seen)
+    live.collect_once(p, channels=(), seen_connections=seen, now=100.0)
     monkeypatch.setattr(live, "collect_netconn", lambda: [later])
-    live.collect_once(p, channels=(), seen_connections=seen)
+    live.collect_once(p, channels=(), seen_connections=seen, now=110.0)
 
     netconn_ingests = [n for s, n in p.seen if s == live.NETCONN_SOURCE]
     assert netconn_ingests == [1]      # first poll only
+
+
+def test_a_still_open_connection_is_re_recorded_after_the_active_timeout(monkeypatch):
+    # The NetFlow active-timeout behaviour: a long-lived flow is not one record
+    # at its start, it is a periodic record while it stays active. Recording
+    # only the first sighting would make an hour-long connection vanish from
+    # the timeline after its first second.
+    from aufla.collect import live
+
+    line = b"1789629547597,192.168.1.10,65499,203.0.113.9,443,Established,chrome,7328"
+    monkeypatch.setattr(live, "collect_netconn", lambda: [line])
+
+    class FakePipeline:
+        def __init__(self):
+            self.counts = []
+
+        def ingest(self, payloads, source, **kw):
+            if source == live.NETCONN_SOURCE:
+                self.counts.append(len(payloads))
+
+            class R:
+                accepted = len(payloads)
+
+            return R()
+
+    p = FakePipeline()
+    seen: dict[str, float] = {}
+    common = dict(channels=(), seen_connections=seen, reobserve_after=60.0)
+
+    live.collect_once(p, now=1000.0, **common)      # first sighting
+    live.collect_once(p, now=1010.0, **common)      # still open, too soon
+    live.collect_once(p, now=1059.0, **common)      # still inside the window
+    live.collect_once(p, now=1061.0, **common)      # window elapsed
+
+    assert p.counts == [1, 1]                       # recorded twice, not four times
+
+
+def test_the_reobservation_window_is_configurable(monkeypatch):
+    from aufla.collect import live
+
+    line = b"1789629547597,10.0.0.1,5000,10.0.0.2,443,Established,app,1"
+    monkeypatch.setattr(live, "collect_netconn", lambda: [line])
+
+    class P:
+        def __init__(self):
+            self.n = 0
+
+        def ingest(self, payloads, source, **kw):
+            if source == live.NETCONN_SOURCE:
+                self.n += 1
+
+            class R:
+                accepted = len(payloads)
+
+            return R()
+
+    p = P()
+    seen: dict[str, float] = {}
+    for t in (0.0, 3.0, 6.0):
+        live.collect_once(
+            p, now=t, channels=(), seen_connections=seen, reobserve_after=2.0
+        )
+    assert p.n == 3        # a 2s window re-records on every one of these polls
 
 
 def test_restarting_capture_clears_the_occurrence_state(tmp_path):
@@ -236,11 +299,11 @@ def test_restarting_capture_clears_the_occurrence_state(tmp_path):
         make_pipeline_factory(tmp_path, registry), interval=30, channels=()
     )
     collector.start()
-    collector._seen_connections.add("stale")
+    collector._seen_connections["stale"] = 1.0
     collector.stop()
 
     collector.start()
-    assert collector._seen_connections == set()
+    assert collector._seen_connections == {}
     assert collector._seen_records == {}
     collector.stop()
 

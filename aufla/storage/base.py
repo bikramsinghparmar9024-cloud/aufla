@@ -56,8 +56,15 @@ class RawStore(ABC):
         since_ns: int | None = None,
         until_ns: int | None = None,
         limit: int | None = None,
+        newest_first: bool = False,
     ) -> Iterator[RawEvent]:
-        """Iterate stored events in arrival order, oldest first."""
+        """Iterate stored events in arrival order, oldest first by default.
+
+        ``newest_first`` reverses the order, which matters whenever ``limit``
+        is set: a limit applied to an ascending scan returns the *oldest* N,
+        so anything recent is unreachable. A console showing live data wants
+        the newest N.
+        """
 
     @abstractmethod
     def close(self) -> None:

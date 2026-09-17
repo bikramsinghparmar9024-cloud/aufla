@@ -297,8 +297,11 @@ class ForensicHandler(BaseHTTPRequestHandler):
         status = query.get("status", [None])[0] or None
         needle = (query.get("q", [""])[0] or "").lower()
 
+        # Newest first at the database, so the limit keeps the most recent
+        # events. Scanning ascending and cutting at the limit would pin the
+        # view to the oldest N and make live capture invisible.
         out: list[dict[str, Any]] = []
-        for event in store.iter_events(source_id=source):
+        for event in store.iter_events(source_id=source, newest_first=True):
             record = self.normalizer.normalize(event)
             if status and record.parse_status.value != status:
                 continue
@@ -328,7 +331,6 @@ class ForensicHandler(BaseHTTPRequestHandler):
             )
             if len(out) >= limit:
                 break
-        out.reverse()  # newest first
         return out
 
     def _event(self, store, ledger, uid: str) -> dict[str, Any]:

@@ -123,6 +123,7 @@ class SQLiteRawStore(RawStore):
         since_ns: int | None = None,
         until_ns: int | None = None,
         limit: int | None = None,
+        newest_first: bool = False,
     ) -> Iterator[RawEvent]:
         clauses: list[str] = []
         params: list[object] = []
@@ -139,7 +140,10 @@ class SQLiteRawStore(RawStore):
         sql = f"SELECT {_COLUMNS} FROM raw_events"
         if clauses:
             sql += " WHERE " + " AND ".join(clauses)
-        sql += " ORDER BY received_at_ns, event_uid"
+        # Ordering is done in SQL so a LIMIT selects from the intended end,
+        # rather than taking the oldest N and reversing them in Python.
+        direction = " DESC" if newest_first else ""
+        sql += f" ORDER BY received_at_ns{direction}, event_uid{direction}"
         if limit is not None:
             sql += " LIMIT ?"
             params.append(limit)

@@ -133,6 +133,31 @@
   input[type=search] { min-width:230px; }
   .verdict { font:600 12.5px var(--mono); }
   .ok { color:var(--good); } .bad { color:var(--crit); }
+  /* live-follow control + new-row treatment */
+  .follow {
+    display:flex; align-items:center; gap:7px; padding:6px 11px; cursor:pointer;
+    border:1px solid var(--line); border-radius:6px; background:var(--surface-2);
+    font-size:12.5px; color:var(--ink-2); user-select:none;
+  }
+  .follow input { accent-color:var(--s1); margin:0; }
+  .follow .dot { width:7px; height:7px; border-radius:50%; background:var(--muted); }
+  .follow.streaming { color:var(--ink); border-color:#1f4a35; }
+  .follow.streaming .dot { background:var(--good); animation:pulse 1.6s infinite; }
+
+  tbody tr.fresh { animation:landed 2.4s ease-out; }
+  @keyframes landed {
+    0%   { background:#123726; box-shadow:inset 3px 0 0 var(--good); }
+    100% { background:transparent; box-shadow:inset 3px 0 0 transparent; }
+  }
+  .newbadge {
+    font-size:9.5px; font-weight:700; letter-spacing:.5px; color:var(--good);
+    border:1px solid #1f4a35; border-radius:3px; padding:0 4px; margin-left:7px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    tbody tr.fresh { animation:none; box-shadow:inset 3px 0 0 var(--good); }
+    .live.on .dot, .follow.streaming .dot { animation:none; }
+  }
+
   .chain { display:flex; flex-direction:column; gap:0; }
   .link { display:flex; align-items:center; gap:10px; padding:7px 0; }
   .link .node {
@@ -217,6 +242,11 @@
         <option value="quarantined">Quarantined</option>
       </select>
       <button class="ghost" id="ev-reload">Refresh</button>
+      <label class="follow" id="followbox">
+        <input type="checkbox" id="follow" checked>
+        <span class="dot"></span>
+        <span id="follow-lbl">Follow live</span>
+      </label>
       <span class="grow"></span>
       <span class="lbl" id="ev-count" style="margin:0"></span>
     </div>
@@ -427,6 +457,12 @@ async function loadOverview() {
     tr.onclick = () => { show("events"); loadEvents().then(() => showEvent(tr.dataset.uid)); });
 }
 
+// Uids already on screen. Only genuinely new arrivals get the landing
+// treatment - re-flashing every row on each poll would make the whole table
+// strobe and hide what actually changed.
+let knownUids = new Set();
+let firstEventsLoad = true;
+
 async function loadEvents() {
   const qs = new URLSearchParams();
   if ($("#q").value) qs.set("q", $("#q").value);
@@ -434,16 +470,33 @@ async function loadEvents() {
   if ($("#f-status").value) qs.set("status", $("#f-status").value);
   evCache = await get("/api/events?" + qs.toString());
 
-  $("#ev-count").textContent = `${evCache.length} event${evCache.length===1?"":"s"}`;
-  $("#ev-rows").innerHTML = evCache.length ? evCache.map(r => `
-    <tr data-uid="${r.event_uid}" class="${r.event_uid===selected?"sel":""}">
-      <td class="mono">${esc(r.received_at.slice(11,19))}</td>
+  const arrivals = firstEventsLoad
+    ? new Set()
+    : new Set(evCache.map(e => e.event_uid).filter(u => !knownUids.has(u)));
+  knownUids = new Set(evCache.map(e => e.event_uid));
+  firstEventsLoad = false;
+
+  const body = $("#ev-rows");
+  const keepScroll = body.parentElement.parentElement.scrollTop;
+
+  $("#ev-count").innerHTML = `${evCache.length} event${evCache.length===1?"":"s"}`
+    + (arrivals.size ? ` · <span style="color:var(--good)">+${arrivals.size} new</span>` : "");
+
+  body.innerHTML = evCache.length ? evCache.map(r => {
+    const isNew = arrivals.has(r.event_uid);
+    return `<tr data-uid="${r.event_uid}" class="${r.event_uid===selected?"sel ":""}${isNew?"fresh":""}">
+      <td class="mono">${esc(r.received_at.slice(11,19))}${isNew?`<span class="newbadge">NEW</span>`:""}</td>
       <td>${esc(r.source_id)}</td>
       <td>${esc(r.summary)}</td>
       <td style="color:var(--ink-2);font-size:12px">${esc(r.class_name||"—")}</td>
       <td><span class="pill ${r.parse_status}">${r.parse_status}</span></td>
-    </tr>`).join("")
+    </tr>`;
+  }).join("")
     : `<tr><td colspan="5" class="empty">No events match.</td></tr>`;
+
+  // Keep the reader's place unless they are pinned to the top watching the
+  // stream, where staying at the top is the whole point.
+  if (keepScroll > 4) body.parentElement.parentElement.scrollTop = keepScroll;
 
   document.querySelectorAll("#ev-rows tr[data-uid]").forEach(tr =>
     tr.onclick = () => showEvent(tr.dataset.uid));
@@ -578,14 +631,46 @@ async function refresh() {
   else if (active === "integrity") await loadIntegrity();
 }
 
-// Poll live status; refresh the active view while capture is running.
-setInterval(async () => {
-  const s = await get("/api/live/status");
-  renderLive(s);
-  if (s.running) refresh();
-}, 5000);
 
-(async () => { renderLive(await get("/api/live/status")); await loadOverview(); })();
+/* ---------------- streaming ----------------
+   Two cadences: the Events table tails at 2s while capture is running and
+   follow is on, because that is the view you watch during a demo. Everything
+   else refreshes at 6s, since aggregate charts do not repay faster polling. */
+
+let lastStatus = {running:false};
+
+function updateFollowUi() {
+  const streaming = lastStatus.running && $("#follow").checked;
+  $("#followbox").classList.toggle("streaming", streaming);
+  $("#follow-lbl").textContent = streaming ? "Streaming"
+    : lastStatus.running ? "Follow live" : "Follow live (capture off)";
+  return streaming;
+}
+
+async function tick(fast) {
+  lastStatus = await get("/api/live/status");
+  renderLive(lastStatus);
+  const streaming = updateFollowUi();
+  const view = document.querySelector("nav button.on").dataset.v;
+
+  if (view === "events") {
+    if (streaming) await loadEvents();
+  } else if (!fast && lastStatus.running) {
+    if (view === "overview") await loadOverview();
+    else if (view === "integrity") await loadIntegrity();
+  }
+}
+
+setInterval(() => tick(true), 2000);
+setInterval(() => tick(false), 6000);
+$("#follow").onchange = () => { if (updateFollowUi()) loadEvents(); };
+
+(async () => {
+  lastStatus = await get("/api/live/status");
+  renderLive(lastStatus);
+  updateFollowUi();
+  await loadOverview();
+})();
 </script>
 </body>
 </html>

@@ -152,6 +152,17 @@ def _connection_key(line: bytes) -> str:
     return ",".join(parts[1:5]) if len(parts) >= 5 else line.decode(errors="replace")
 
 
+# How long a still-open connection waits before it is recorded again.
+#
+# This is the NetFlow/IPFIX *active timeout*: a long-lived flow is not one
+# record at its start, it is a periodic record for as long as it is active
+# (60s is the conventional default). Recording only the first sighting would
+# make a connection that stays open for an hour vanish from the timeline;
+# recording it on every poll would inflate one flow into hundreds of events.
+# A re-observation window is the standard answer to both.
+REOBSERVE_AFTER = 60.0
+
+
 @dataclass(slots=True)
 class CollectorStatus:
     """What the collector is doing, for the UI to poll."""
@@ -188,22 +199,27 @@ def collect_once(
     *,
     channels: tuple[str, ...] = ("System", "Application"),
     seen_records: dict[str, int] | None = None,
-    seen_connections: set[str] | None = None,
+    seen_connections: dict[str, float] | None = None,
+    reobserve_after: float = REOBSERVE_AFTER,
+    now: float | None = None,
 ) -> dict[str, int]:
     """Collect one round from every source. Returns accepted counts per source.
 
-    Both state arguments exist to record each real-world occurrence once. A
-    firewall logs a connection *event*, not a connection's ongoing state, so a
-    connection is recorded when first observed rather than re-emitted on every
-    poll for as long as it stays open.
+    Both state arguments exist so each real-world occurrence is recorded the
+    right number of times. A Windows event happened once and is recorded once.
+    A connection that is still open is re-recorded once per active-timeout
+    window, the way a flow exporter does it.
     """
+    clock = time.time() if now is None else now
+
     netconn = collect_netconn()
     if seen_connections is not None:
         fresh = []
         for line in netconn:
             key = _connection_key(line)
-            if key not in seen_connections:
-                seen_connections.add(key)
+            last = seen_connections.get(key)
+            if last is None or clock - last >= reobserve_after:
+                seen_connections[key] = clock
                 fresh.append(line)
         netconn = fresh
 
@@ -230,14 +246,16 @@ class LiveCollector:
         *,
         interval: float = 10.0,
         channels: tuple[str, ...] = ("System", "Application"),
+        reobserve_after: float = REOBSERVE_AFTER,
     ) -> None:
         self.pipeline_factory = pipeline_factory
         self.interval = interval
         self.channels = channels
+        self.reobserve_after = reobserve_after
         self.status = CollectorStatus()
         # Per-occurrence state, so each real event is recorded once.
         self._seen_records: dict[str, int] = {}
-        self._seen_connections: set[str] = set()
+        self._seen_connections: dict[str, float] = {}
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
         self._lock = threading.Lock()
@@ -250,7 +268,7 @@ class LiveCollector:
                 return self.status
             self._stop.clear()
             self._seen_records = {}
-            self._seen_connections = set()
+            self._seen_connections = {}
             self.status = CollectorStatus(running=True, started_at=time.time())
             self._thread = threading.Thread(
                 target=self._loop, name="aufla-live-collector", daemon=True
@@ -294,6 +312,7 @@ class LiveCollector:
                     channels=self.channels,
                     seen_records=self._seen_records,
                     seen_connections=self._seen_connections,
+                    reobserve_after=self.reobserve_after,
                 )
             finally:
                 closer()

@@ -111,6 +111,46 @@ def test_iteration_filters_by_source_and_time(store):
     assert len(list(store.iter_events(limit=1))) == 1
 
 
+def test_newest_first_reverses_the_order(store):
+    events = [
+        RawEvent.capture(f"e{i}".encode(), "fw01", received_at_ns=i * 1_000)
+        for i in range(5)
+    ]
+    store.append(events)
+
+    oldest = [e.raw_bytes for e in store.iter_events()]
+    newest = [e.raw_bytes for e in store.iter_events(newest_first=True)]
+    assert newest == list(reversed(oldest))
+
+
+def test_a_limit_with_newest_first_keeps_the_most_recent(store):
+    # The bug this pins: a limit applied to an ascending scan returns the
+    # OLDEST n, so a live console never shows anything recent.
+    events = [
+        RawEvent.capture(f"e{i}".encode(), "fw01", received_at_ns=i * 1_000)
+        for i in range(50)
+    ]
+    store.append(events)
+
+    oldest_three = [e.raw_bytes for e in store.iter_events(limit=3)]
+    newest_three = [e.raw_bytes for e in store.iter_events(limit=3, newest_first=True)]
+
+    assert oldest_three == [b"e0", b"e1", b"e2"]
+    assert newest_three == [b"e49", b"e48", b"e47"]
+
+
+def test_newest_first_still_honours_filters(store):
+    store.append(
+        [
+            RawEvent.capture(b"a", "fw01", received_at_ns=1_000),
+            RawEvent.capture(b"b", "fw02", received_at_ns=2_000),
+            RawEvent.capture(b"c", "fw01", received_at_ns=3_000),
+        ]
+    )
+    got = [e.raw_bytes for e in store.iter_events(source_id="fw01", newest_first=True)]
+    assert got == [b"c", b"a"]
+
+
 def test_metadata_round_trips(store):
     e = RawEvent.capture(
         b"x",
