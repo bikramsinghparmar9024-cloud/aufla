@@ -7,7 +7,10 @@ name = "aufla"
 version = "0.1.0"
 description = "Universal Log Pre-processing Framework — SIH 2026 PS 26156"
 requires-python = ">=3.10"
-dependencies = ["PyYAML>=6.0"]
+dependencies = [
+    "PyYAML>=6.0",
+    "cryptography>=41.0.0",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.4"]

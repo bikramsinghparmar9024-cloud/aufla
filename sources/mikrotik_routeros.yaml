@@ -1,0 +1,41 @@
+# MikroTik RouterOS firewall log.
+#
+#   Sep/18/2026 15:30:00 firewall,info forward: in:ether1 out:ether2,
+#   connection-state:new src-mac 00:0c:42:12:34:56, proto TCP (SYN),
+#   10.0.0.5:45678->198.51.100.23:443, len 60
+#
+# Free-text prose with embedded IPs, ports, MACs and byte counts. Each value
+# is extracted by its own regex against $_raw, the same strategy used for
+# cisco_asa and openssh_auth. The arrow notation "src:port->dst:port" is
+# unambiguous, so no endpoint-swap risk.
+source: mikrotik_routeros
+format: raw
+ocsf_version: "1.5.0"
+version: 1
+description: MikroTik RouterOS firewall connection logs.
+author: human
+approved_by: secops-team
+approved_at: "2026-09-18"
+
+rules:
+  - name: firewall_conn
+    match: { field: $_raw, contains: "firewall,info" }
+    ocsf_class: 4001
+    fields:
+      src_endpoint.ip:   { from: $_raw, regex: "([0-9.]+):\\d+->" }
+      src_endpoint.port: { from: $_raw, regex: "[0-9.]+:(\\d+)->" }
+      dst_endpoint.ip:   { from: $_raw, regex: "->([0-9.]+):" }
+      dst_endpoint.port: { from: $_raw, regex: "->[0-9.]+:(\\d+)" }
+      src_endpoint.mac:  { from: $_raw, regex: "src-mac ([0-9a-fA-F:]+)" }
+      connection_info.protocol_num:
+        from: $_raw
+        regex: "proto (\\w+)"
+        lookup: proto_number
+        default: 6
+      traffic.bytes: { from: $_raw, regex: "len (\\d+)" }
+      disposition_id: 1
+      activity_id: 6
+      severity_id: 1
+      metadata.product.name: RouterOS
+      metadata.product.vendor_name: MikroTik
+      metadata.log_name: firewall

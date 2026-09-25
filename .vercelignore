@@ -1,0 +1,15 @@
+.git
+.pytest_cache
+.venv
+__pycache__
+*.py[cod]
+tests
+docker
+docs
+samples
+*.docx
+extracted_paper.txt
+humanize_paper.py
+all_logs.json
+data/*.db-shm
+data/*.db-wal

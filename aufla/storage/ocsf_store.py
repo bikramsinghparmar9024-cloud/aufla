@@ -66,7 +66,11 @@ CREATE TABLE IF NOT EXISTS ocsf_events (
     fields           TEXT    NOT NULL,
     unmapped         TEXT,
     warnings         TEXT,
-    notes            TEXT
+    notes            TEXT,
+    triage_status    TEXT,      -- NULL, or 'normal' once a human dismisses it
+    triaged_by       TEXT,
+    triaged_ns       INTEGER,
+    triage_note      TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_ocsf_time   ON ocsf_events (observed_time);
@@ -104,7 +108,30 @@ class OCSFStore:
             self._conn.execute("PRAGMA journal_mode=WAL")
         self._conn.execute("PRAGMA synchronous=NORMAL")
         self._conn.executescript(_SCHEMA)
+        self._migrate()
         self._conn.commit()
+
+    def _migrate(self) -> None:
+        """Add columns introduced after a database was first created.
+
+        CREATE TABLE IF NOT EXISTS never alters an existing table, so a
+        database from before the triage columns existed needs them added
+        explicitly. Each ALTER is independent and ignored if the column is
+        already there, so this is safe to run on every startup.
+        """
+        for column in ("triage_status", "triaged_by", "triage_note"):
+            try:
+                self._conn.execute(
+                    f"ALTER TABLE ocsf_events ADD COLUMN {column} TEXT"
+                )
+            except sqlite3.OperationalError:
+                pass
+        try:
+            self._conn.execute(
+                "ALTER TABLE ocsf_events ADD COLUMN triaged_ns INTEGER"
+            )
+        except sqlite3.OperationalError:
+            pass
 
     # ---- writes -----------------------------------------------------------
 
@@ -122,7 +149,8 @@ class OCSFStore:
             uid = str(record.event_uid)
             status = record.parse_status.value
             prior = self._conn.execute(
-                "SELECT first_status, first_seen_ns, resolved_at_ns"
+                "SELECT first_status, first_seen_ns, resolved_at_ns,"
+                " triage_status, triaged_by, triaged_ns, triage_note"
                 " FROM ocsf_events WHERE event_uid = ?",
                 (uid,),
             ).fetchone()
@@ -130,10 +158,19 @@ class OCSFStore:
             if prior is None:
                 first_status, first_seen = status, now
                 resolved_at = None
+                triage_status = triaged_by = triaged_ns = triage_note = None
             else:
                 first_status = prior["first_status"]
                 first_seen = prior["first_seen_ns"]
                 resolved_at = prior["resolved_at_ns"]
+                # A manual "mark as normal" is an analyst's judgement about the
+                # event, not about the mapping. A re-derivation (a corrected
+                # mapping, a backfill) must not silently erase it, so it is
+                # carried forward exactly like first_status is.
+                triage_status = prior["triage_status"]
+                triaged_by = prior["triaged_by"]
+                triaged_ns = prior["triaged_ns"]
+                triage_note = prior["triage_note"]
 
             # A quarantined event that now parses has been resolved. Stamped
             # once, so a later re-derivation does not move the date.
@@ -152,8 +189,9 @@ class OCSFStore:
                 " class_uid, mapping_id, mapping_version, mapping_hash, rule_name,"
                 " parse_status, first_status, first_seen_ns, resolved_at_ns,"
                 " mapping_coverage, severity_id, src_ip, src_port, dst_ip, dst_port,"
-                " summary, fields, unmapped, warnings, notes"
-                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                " summary, fields, unmapped, warnings, notes,"
+                " triage_status, triaged_by, triaged_ns, triage_note"
+                ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     uid, record.raw_hash, record.source_id,
                     record.observed_time, f.get("time"),
@@ -168,6 +206,7 @@ class OCSFStore:
                     json.dumps(record.unmapped, default=str) if record.unmapped else None,
                     json.dumps(record.warnings) if record.warnings else None,
                     json.dumps(record.notes) if record.notes else None,
+                    triage_status, triaged_by, triaged_ns, triage_note,
                 ),
             )
             written += 1
@@ -192,6 +231,7 @@ class OCSFStore:
         source_id: str | None = None,
         status: str | None = None,
         since_ms: int | None = None,
+        until_ms: int | None = None,
     ) -> tuple[str, list[Any]]:
         clauses: list[str] = []
         params: list[Any] = []
@@ -204,6 +244,9 @@ class OCSFStore:
         if since_ms is not None:
             clauses.append("observed_time >= ?")
             params.append(since_ms)
+        if until_ms is not None:
+            clauses.append("observed_time <= ?")
+            params.append(until_ms)
         return (" WHERE " + " AND ".join(clauses) if clauses else ""), params
 
     def query(
@@ -212,12 +255,14 @@ class OCSFStore:
         source_id: str | None = None,
         status: str | None = None,
         since_ms: int | None = None,
+        until_ms: int | None = None,
         search: str | None = None,
         limit: int = 300,
         newest_first: bool = True,
     ) -> list[dict[str, Any]]:
         where, params = self._where(
-            source_id=source_id, status=status, since_ms=since_ms
+            source_id=source_id, status=status,
+            since_ms=since_ms, until_ms=until_ms,
         )
         if search:
             where += (" AND " if where else " WHERE ") + (
@@ -236,14 +281,15 @@ class OCSFStore:
     # ---- aggregations (in SQL, not by re-parsing) -------------------------
 
     def counts_by(
-        self, column: str, *, since_ms: int | None = None, limit: int = 20
+        self, column: str, *, since_ms: int | None = None,
+        until_ms: int | None = None, limit: int = 20,
     ) -> list[tuple[Any, int]]:
         if column not in {
             "source_id", "parse_status", "class_uid", "severity_id",
             "dst_ip", "mapping_id", "first_status",
         }:
             raise ValueError(f"not an aggregatable column: {column}")
-        where, params = self._where(since_ms=since_ms)
+        where, params = self._where(since_ms=since_ms, until_ms=until_ms)
         extra = ("AND" if where else "WHERE") + f" {column} IS NOT NULL"
         rows = self._conn.execute(
             f"SELECT {column} AS k, COUNT(*) AS n FROM ocsf_events{where} {extra}"
@@ -283,9 +329,10 @@ class OCSFStore:
         return [(r["source_id"], r["n"]) for r in rows]
 
     def timeline(
-        self, *, since_ms: int | None = None, buckets: int = 40
+        self, *, since_ms: int | None = None,
+        until_ms: int | None = None, buckets: int = 40,
     ) -> dict[str, Any]:
-        where, params = self._where(since_ms=since_ms)
+        where, params = self._where(since_ms=since_ms, until_ms=until_ms)
         span = self._conn.execute(
             f"SELECT MIN(observed_time) AS lo, MAX(observed_time) AS hi"
             f" FROM ocsf_events{where}",
@@ -319,15 +366,32 @@ class OCSFStore:
         ]
         return {"sources": sources, "bucket_ms": bucket, "points": points}
 
-    def average_coverage(self, *, since_ms: int | None = None) -> float:
-        where, params = self._where(since_ms=since_ms)
+    def average_coverage(self, *, since_ms: int | None = None,
+                         until_ms: int | None = None) -> float:
+        where, params = self._where(since_ms=since_ms, until_ms=until_ms)
         row = self._conn.execute(
             f"SELECT AVG(mapping_coverage) AS a FROM ocsf_events{where}", params
         ).fetchone()
         return round(row["a"] or 0.0, 4)
 
-    def event_count(self, *, since_ms: int | None = None) -> int:
-        where, params = self._where(since_ms=since_ms)
+    def event_count(
+        self,
+        *,
+        source_id: str | None = None,
+        status: str | None = None,
+        since_ms: int | None = None,
+        until_ms: int | None = None,
+        search: str | None = None,
+    ) -> int:
+        where, params = self._where(
+            source_id=source_id, status=status,
+            since_ms=since_ms, until_ms=until_ms,
+        )
+        if search:
+            where += (" AND " if where else " WHERE ") + (
+                "(summary LIKE ? OR source_id LIKE ?)"
+            )
+            params += [f"%{search}%", f"%{search}%"]
         return int(
             self._conn.execute(
                 f"SELECT COUNT(*) FROM ocsf_events{where}", params
@@ -335,16 +399,53 @@ class OCSFStore:
         )
 
     def findings(
-        self, *, since_ms: int | None = None, min_severity: int = 3, limit: int = 12
+        self, *, since_ms: int | None = None, until_ms: int | None = None,
+        min_severity: int = 3, limit: int = 500, include_triaged: bool = False,
     ) -> list[dict[str, Any]]:
-        where, params = self._where(since_ms=since_ms)
+        """Dangerous events in the window.
+
+        Excludes anything a human has manually marked normal, unless
+        ``include_triaged`` asks for the full history (the Findings tab's
+        "cleared" view). The default limit is generous rather than a hard
+        cap on a security console -- 12 silently hid genuine findings once a
+        source produced more than a dozen in one window.
+        """
+        where, params = self._where(since_ms=since_ms, until_ms=until_ms)
         joiner = "AND" if where else "WHERE"
+        clause = f"{joiner} severity_id >= ?"
+        params2 = [*params, min_severity]
+        if not include_triaged:
+            clause += " AND (triage_status IS NULL OR triage_status != 'normal')"
         rows = self._conn.execute(
-            f"SELECT * FROM ocsf_events{where} {joiner} severity_id >= ?"
+            f"SELECT * FROM ocsf_events{where} {clause}"
             " ORDER BY severity_id DESC, observed_time DESC LIMIT ?",
-            [*params, min_severity, limit],
+            [*params2, limit],
         )
         return [self._to_dict(r) for r in rows]
+
+    def set_triage(
+        self, event_uid: str, *, by: str, status: str = "normal",
+        note: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Record a human's manual call on one event.
+
+        This never touches ``severity_id`` or any other derived field --
+        those stay exactly what the mapping produced, so a re-derivation
+        (a corrected mapping, a backfill) cannot silently disagree with a
+        judgement someone already made. The judgement lives beside the
+        derived data, not inside it, and ``upsert`` carries it forward.
+        """
+        if not by:
+            raise ValueError("a triage decision must name who made it")
+        if self.get(event_uid) is None:
+            return None
+        self._conn.execute(
+            "UPDATE ocsf_events SET triage_status = ?, triaged_by = ?,"
+            " triaged_ns = ?, triage_note = ? WHERE event_uid = ?",
+            (status, by, time.time_ns(), note, event_uid),
+        )
+        self._conn.commit()
+        return self.get(event_uid)
 
     def sample_uids(self, source_id: str, limit: int = 5) -> list[str]:
         rows = self._conn.execute(

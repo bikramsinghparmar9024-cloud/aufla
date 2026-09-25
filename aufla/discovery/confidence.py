@@ -29,6 +29,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..mapping.loader import MappingRegistry
 from ..mapping.schema import Mapping, MappingError
 from ..models import ParseStatus, RawEvent, Transport
 from ..normalize.engine import Normalizer
@@ -89,14 +90,19 @@ class ConfidenceReport:
         }
 
 
-class _OneMapping:
-    """Registry holding exactly the mapping under test."""
+def _registry_for(mapping: Mapping) -> MappingRegistry:
+    """A real MappingRegistry holding just the candidate mapping.
 
-    def __init__(self, mapping: Mapping) -> None:
-        self._mapping = mapping
-
-    def get(self, source: str):
-        return self._mapping if source == self._mapping.source else None
+    Scoring must go through the same registry class production uses, not a
+    hand-rolled stand-in: any behaviour the real registry adds (approval
+    gating, hot-reload bookkeeping) then applies to scoring too, instead of
+    silently diverging from it. No directory is ever read -- .add() registers
+    the mapping in memory only, exactly as it does for the pre-approval state
+    before a proposal is written to disk.
+    """
+    registry = MappingRegistry(directory="(discovery-scoring, in-memory only)")
+    registry.add(mapping)
+    return registry
 
 
 def score_proposal(
@@ -124,7 +130,7 @@ def score_proposal(
         report.checks.append(Check("schema validity", False, 0.0, str(exc)))
         return report
 
-    normalizer = Normalizer(_OneMapping(mapping))
+    normalizer = Normalizer(_registry_for(mapping))
     tail = samples[-holdout:] if len(samples) > holdout else samples
     records = [
         normalizer.normalize(

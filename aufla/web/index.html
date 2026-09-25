@@ -4,9 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AUFLA — Universal Log Pre-processing Framework</title>
+<script>
+  (function() {
+    var saved = localStorage.getItem("aufla_theme");
+    var theme = saved || (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
 <style>
   :root {
-    --page:#0d1117; --surface:#161b22; --surface-2:#1c2230; --line:#262d38;
+    --page:#0d1117; --surface:#161b22; --surface-2:#1c2230; --surface-hover:#222938; --line:#262d38;
     --ink:#e6edf3; --ink-2:#9aa7b4; --muted:#6e7c8c;
     --grid:#232a35; --axis:#333c49;
 
@@ -21,9 +28,51 @@
     /* Status palette - reserved, never reused as a series colour. */
     --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
 
+    --pill-full-bg:#0d2f1a; --pill-full-ink:#4ec96e;
+    --pill-partial-bg:#33290a; --pill-partial-ink:var(--warn);
+    --pill-quarantine-bg:#3a1416; --pill-quarantine-ink:#f2706e;
+
+    --pre-bg:#0a0e14; --pre-ink:#b9cde0;
+    --sel-bg:#1b2a3b;
+    --tooltip-shadow:0 6px 18px rgba(0,0,0,.35);
+    --fresh-flash-bg:#123726;
+    --stream-border:#1f4a35;
+    --badge-bg:var(--warn); --badge-ink:#1a1400;
+
+    --act-ink:#06121f;
+    --color-scheme:dark;
+
     --mono:"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace;
     --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
   }
+
+  [data-theme="light"] {
+    --page:#f6f8fa; --surface:#ffffff; --surface-2:#f0f3f6; --surface-hover:#e4e9ef; --line:#d0d7de;
+    --ink:#1f2328; --ink-2:#4a5568; --muted:#656d76;
+    --grid:#e5e9ef; --axis:#cbd5e1;
+
+    /* High-contrast accessible series for light background (WCAG AA/AAA) */
+    --s1:#0969da; --s2:#bc4c00; --s3:#1a7f5a; --s4:#9a6700;
+    --s5:#bf3989; --s6:#116329; --s7:#6e57cb; --s8:#cf222e;
+
+    /* Status palette tuned for light backgrounds */
+    --good:#1a7f37; --warn:#9a6700; --serious:#bc4c00; --crit:#cf222e;
+
+    --pill-full-bg:#dafbe1; --pill-full-ink:#1a7f37;
+    --pill-partial-bg:#fff8c5; --pill-partial-ink:#9a6700;
+    --pill-quarantine-bg:#ffebe9; --pill-quarantine-ink:#cf222e;
+
+    --pre-bg:#f6f8fa; --pre-ink:#1f2328;
+    --sel-bg:#ddf4ff;
+    --tooltip-shadow:0 4px 14px rgba(0,0,0,.12);
+    --fresh-flash-bg:#dafbe1;
+    --stream-border:#2da44e;
+    --badge-bg:#fff8c5; --badge-ink:#7d4e00;
+
+    --act-ink:#ffffff;
+    --color-scheme:light;
+  }
+
   * { box-sizing:border-box; }
   html,body { height:100%; }
   body { margin:0; background:var(--page); color:var(--ink); font:14px/1.5 var(--sans); }
@@ -31,24 +80,47 @@
   /* ---------- shell ---------- */
   .app { display:grid; grid-template-rows:auto 1fr; height:100%; }
   header {
-    display:flex; align-items:center; gap:18px; padding:0 20px; height:58px;
+    display:flex; align-items:center; gap:18px; padding:0 24px; min-height:62px; height:62px;
     background:var(--surface); border-bottom:1px solid var(--line);
   }
-  .brand { display:flex; align-items:baseline; gap:10px; }
-  .brand b { font-size:16px; letter-spacing:.2px; }
-  .brand span { color:var(--muted); font-size:11.5px; }
-  nav { display:flex; gap:2px; margin-left:14px; }
+  .brand { display:flex; align-items:baseline; gap:10px; flex-shrink:0; }
+  .brand b { font-size:20px; font-weight:900; letter-spacing:.3px; color:var(--ink); }
+
+  nav { display:flex; gap:8px; margin-left:18px; align-items:center; flex-shrink:0; }
   nav button {
-    background:none; border:0; color:var(--ink-2); padding:8px 14px; border-radius:6px;
-    font:500 13px var(--sans); cursor:pointer;
+    background:transparent; border:1px solid transparent; color:var(--ink-2); padding:9px 18px; border-radius:8px;
+    font:600 14.5px var(--sans); cursor:pointer; white-space:nowrap;
+    transition:background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
   }
-  nav button:hover { background:var(--surface-2); color:var(--ink); }
-  nav button.on { background:var(--surface-2); color:var(--ink); box-shadow:inset 0 -2px 0 var(--s1); }
+  nav button:hover { background:var(--surface-hover); color:var(--ink); border-color:var(--line); }
+  nav button.on {
+    background:var(--surface-2); color:var(--ink); font-weight:700;
+    border-color:var(--line); box-shadow:inset 0 -3px 0 var(--s1), 0 1px 3px rgba(0,0,0,.08);
+  }
   .grow { flex:1; }
 
+  .theme-toggle {
+    display:inline-flex; align-items:center; width:52px; height:28px;
+    background:var(--surface-2); border:1px solid var(--line);
+    border-radius:14px; cursor:pointer; position:relative;
+    transition:background .25s ease, border-color .25s ease;
+    flex-shrink:0; padding:0; user-select:none;
+  }
+  .theme-toggle:hover { border-color:var(--ink-2); }
+  .theme-toggle .circle {
+    position:absolute; top:2px; left:2px; width:22px; height:22px;
+    background:var(--ink); border-radius:50%;
+    transition:transform .25s cubic-bezier(.4,0,.2,1), background .25s ease;
+    display:flex; align-items:center; justify-content:center;
+    font-size:13px; line-height:1;
+  }
+  [data-theme="light"] .theme-toggle { background:var(--s1); border-color:var(--s1); }
+  [data-theme="light"] .theme-toggle .circle { transform:translateX(24px); background:#fff; }
+
   .live {
-    display:flex; align-items:center; gap:10px; padding:5px 8px 5px 12px;
+    display:flex; align-items:center; gap:10px; padding:6px 10px 6px 14px;
     border:1px solid var(--line); border-radius:8px; background:var(--surface-2);
+    flex-shrink:0;
   }
   .live .dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
   .live.on .dot { background:var(--good); animation:pulse 1.6s infinite; }
@@ -56,7 +128,7 @@
   .live .lbl { font-size:12px; color:var(--ink-2); font-variant-numeric:tabular-nums; }
 
   button.act {
-    background:var(--s1); color:#06121f; border:0; border-radius:6px;
+    background:var(--s1); color:var(--act-ink); border:0; border-radius:6px;
     padding:7px 14px; font:600 12.5px var(--sans); cursor:pointer;
   }
   button.act:hover { filter:brightness(1.08); }
@@ -65,7 +137,7 @@
     background:transparent; color:var(--ink); border:1px solid var(--line);
     border-radius:6px; padding:7px 13px; font:500 12.5px var(--sans); cursor:pointer;
   }
-  button.ghost:hover { background:var(--surface-2); }
+  button.ghost:hover { background:var(--surface-hover); }
 
   main { overflow:auto; padding:20px; }
   .view { display:none; max-width:1600px; margin:0 auto; }
@@ -75,7 +147,7 @@
   .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); gap:12px; }
   .tile { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
   .tile .k { color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.8px; }
-  .tile .v { font-size:26px; font-weight:600; margin-top:5px; }
+  .tile .v { font-size:26px; font-weight:600; margin-top:5px; color:var(--ink); }
   .tile .sub { color:var(--ink-2); font-size:11.5px; margin-top:2px; }
 
   .grid2 { display:grid; grid-template-columns:2fr 1fr; gap:14px; margin-top:14px; }
@@ -92,6 +164,23 @@
   .card .pad { padding:14px 16px; }
 
   .legend { display:flex; flex-wrap:wrap; gap:14px; padding:0 16px 12px; font-size:12px; color:var(--ink-2); }
+
+  /* timeline chart: positioning host for the hover crosshair + tooltip */
+  .tl-wrap { position:relative; }
+  .tl-tooltip {
+    position:absolute; top:0; left:0; transform:translate(-50%,-100%);
+    background:var(--surface-2); border:1px solid var(--line); border-radius:7px;
+    padding:8px 11px; font-size:11.5px; line-height:1.5; color:var(--ink);
+    pointer-events:none; white-space:nowrap; box-shadow:var(--tooltip-shadow);
+    z-index:5;
+  }
+  .tl-tooltip .tt-time { color:var(--ink-2); font-size:10.5px; margin-bottom:3px; }
+  .tl-tooltip .tt-row { display:flex; align-items:center; gap:6px; }
+  .tl-tooltip .tt-dot { width:7px; height:7px; border-radius:50%; flex:none; }
+  .tl-tooltip .tt-total {
+    margin-top:4px; padding-top:4px; border-top:1px solid var(--line);
+    color:var(--ink-2); font-variant-numeric:tabular-nums;
+  }
   .legend i { width:9px; height:9px; border-radius:2px; display:inline-block; margin-right:6px; }
 
   table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -101,42 +190,46 @@
     position:sticky; top:0; background:var(--surface-2); z-index:1;
   }
   td { padding:8px 14px; border-bottom:1px solid var(--line); }
-  tbody tr:hover { background:var(--surface-2); }
-  tbody tr.sel { background:#1b2a3b; }
+  tbody tr:hover { background:var(--surface-hover); }
+  tbody tr.sel { background:var(--sel-bg); }
   .clickable tbody tr { cursor:pointer; }
   .mono { font-family:var(--mono); font-size:12px; }
   .num { font-variant-numeric:tabular-nums; }
   .scroll { max-height:56vh; overflow:auto; }
 
   .pill { font-size:10.5px; padding:2px 8px; border-radius:99px; font-weight:600; white-space:nowrap; }
-  .full { background:#0d2f1a; color:#4ec96e; }
-  .partial { background:#33290a; color:var(--warn); }
-  .quarantined { background:#3a1416; color:#f2706e; }
+  .full { background:var(--pill-full-bg); color:var(--pill-full-ink); }
+  .partial { background:var(--pill-partial-bg); color:var(--pill-partial-ink); }
+  .quarantined { background:var(--pill-quarantine-bg); color:var(--pill-quarantine-ink); }
   .sev { font-size:10.5px; padding:2px 7px; border-radius:4px; font-weight:600; }
 
   .kv { display:grid; grid-template-columns:150px 1fr; gap:6px 14px; }
   .kv dt { color:var(--muted); font-size:12px; }
-  .kv dd { margin:0; font-family:var(--mono); font-size:11.5px; word-break:break-all; }
+  .kv dd { margin:0; font-family:var(--mono); font-size:11.5px; word-break:break-all; color:var(--ink); }
 
   pre {
-    margin:0; padding:12px 14px; background:#0a0e14; color:#b9cde0; border:1px solid var(--line);
+    margin:0; padding:12px 14px; background:var(--pre-bg); color:var(--pre-ink); border:1px solid var(--line);
     border-radius:8px; font-family:var(--mono); font-size:11.5px; white-space:pre-wrap; word-break:break-all;
     max-height:220px; overflow:auto;
   }
   .lbl { color:var(--muted); font-size:10.5px; text-transform:uppercase; letter-spacing:.7px; margin:14px 0 6px; }
   .empty { padding:30px 16px; color:var(--muted); text-align:center; font-size:13px; }
   .bar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
-  input[type=search], select {
+  input[type=search], select, input[type=datetime-local], input[type=number], input[type=text] {
     background:var(--surface-2); color:var(--ink); border:1px solid var(--line);
     border-radius:6px; padding:7px 10px; font:13px var(--sans);
+    color-scheme:var(--color-scheme);
+  }
+  input[type=search]:focus, select:focus, input[type=datetime-local]:focus, input[type=number]:focus, input[type=text]:focus {
+    outline:none; border-color:var(--s1);
   }
   input[type=search] { min-width:230px; }
   .verdict { font:600 12.5px var(--mono); }
   .ok { color:var(--good); } .bad { color:var(--crit); }
   /* review queue */
   .badge {
-    background:var(--warn); color:#1a1400; border-radius:99px; padding:0 6px;
-    font-size:10.5px; font-weight:700; margin-left:6px;
+    background:var(--badge-bg); color:var(--badge-ink); border-radius:99px; padding:1px 7px;
+    font-size:11px; font-weight:700; margin-left:7px; display:inline-block; vertical-align:middle;
   }
   .prop { border-bottom:1px solid var(--line); padding:16px; }
   .prop:last-child { border-bottom:0; }
@@ -144,9 +237,9 @@
   .prop-head b { font-size:14px; }
   .conf {
     font:600 12px var(--mono); padding:3px 9px; border-radius:5px;
-    background:#3a1416; color:#f2706e;
+    background:var(--pill-quarantine-bg); color:var(--pill-quarantine-ink);
   }
-  .conf.ok { background:#0d2f1a; color:#4ec96e; }
+  .conf.ok { background:var(--pill-full-bg); color:var(--pill-full-ink); }
   .checks { display:grid; gap:5px; margin:12px 0; }
   .chk { display:flex; gap:9px; align-items:baseline; font-size:12.5px; }
   .chk .mark { font:700 11px var(--mono); width:42px; flex:none; }
@@ -160,8 +253,9 @@
   .decide input {
     background:var(--surface-2); color:var(--ink); border:1px solid var(--line);
     border-radius:6px; padding:7px 10px; font:13px var(--sans); min-width:190px;
+    color-scheme:var(--color-scheme);
   }
-  button.approve { background:var(--good); color:#03210a; }
+  button.approve { background:var(--good); color:#fff; }
   button.reject  { background:transparent; color:var(--crit); border:1px solid var(--crit); }
 
   /* segmented time-window control */
@@ -171,8 +265,8 @@
     padding:6px 13px; font:500 12.5px var(--sans); cursor:pointer;
   }
   .seg button:last-child { border-right:0; }
-  .seg button:hover { background:var(--surface-2); color:var(--ink); }
-  .seg button.on { background:var(--s1); color:#06121f; font-weight:600; }
+  .seg button:hover { background:var(--surface-hover); color:var(--ink); }
+  .seg button.on { background:var(--s1); color:var(--act-ink); font-weight:600; }
 
   /* live-follow control + new-row treatment */
   .follow {
@@ -182,17 +276,17 @@
   }
   .follow input { accent-color:var(--s1); margin:0; }
   .follow .dot { width:7px; height:7px; border-radius:50%; background:var(--muted); }
-  .follow.streaming { color:var(--ink); border-color:#1f4a35; }
+  .follow.streaming { color:var(--ink); border-color:var(--stream-border); }
   .follow.streaming .dot { background:var(--good); animation:pulse 1.6s infinite; }
 
   tbody tr.fresh { animation:landed 2.4s ease-out; }
   @keyframes landed {
-    0%   { background:#123726; box-shadow:inset 3px 0 0 var(--good); }
+    0%   { background:var(--fresh-flash-bg); box-shadow:inset 3px 0 0 var(--good); }
     100% { background:transparent; box-shadow:inset 3px 0 0 transparent; }
   }
   .newbadge {
     font-size:9.5px; font-weight:700; letter-spacing:.5px; color:var(--good);
-    border:1px solid #1f4a35; border-radius:3px; padding:0 4px; margin-left:7px;
+    border:1px solid var(--stream-border); border-radius:3px; padding:0 4px; margin-left:7px;
   }
   @media (prefers-reduced-motion: reduce) {
     tbody tr.fresh { animation:none; box-shadow:inset 3px 0 0 var(--good); }
@@ -214,7 +308,6 @@
 <header>
   <div class="brand">
     <b>AUFLA</b>
-    <span>Universal Log Pre-processing Framework · SIH 2026 · PS 26156 · NTRO/NCIIPC</span>
   </div>
   <nav>
     <button data-v="overview" class="on">Overview</button>
@@ -222,8 +315,12 @@
     <button data-v="sources">Sources</button>
     <button data-v="review">Review <span class="badge" id="rv-badge" hidden>0</span></button>
     <button data-v="integrity">Integrity</button>
+    <button data-v="report">Report & Evidence</button>
   </nav>
   <div class="grow"></div>
+  <button class="theme-toggle" id="themetoggle" type="button" aria-label="Toggle theme" title="Switch theme">
+    <span class="circle"></span>
+  </button>
   <div class="live" id="livebox">
     <span class="dot"></span>
     <span class="lbl" id="livelbl">Live capture off</span>
@@ -239,6 +336,12 @@
     <div class="bar" style="margin-top:16px;margin-bottom:0">
       <span class="lbl" style="margin:0">Window</span>
       <div class="seg" id="ranges"></div>
+      <span style="color:var(--muted);font-size:12px;margin:0 4px">or custom (IST):</span>
+      <input type="datetime-local" id="ov-from" title="From date and time (IST)" style="font-size:12px;padding:5px 8px">
+      <span style="color:var(--muted);font-size:12px">to</span>
+      <input type="datetime-local" id="ov-to" title="To date and time (IST)" style="font-size:12px;padding:5px 8px">
+      <button class="ghost" id="ov-apply" style="padding:5px 10px;font-size:12px">Apply</button>
+      <button class="ghost" id="ov-clear" style="padding:5px 10px;font-size:12px">Clear</button>
       <span class="grow"></span>
       <span class="lbl" style="margin:0" id="range-note"></span>
     </div>
@@ -246,7 +349,7 @@
     <div class="grid2">
       <div class="card">
         <h2>Events ingested over time <span class="note" id="tl-note"></span></h2>
-        <div id="timeline"></div>
+        <div id="timeline" class="tl-wrap"></div>
         <div class="legend" id="tl-legend"></div>
       </div>
       <div class="card">
@@ -271,11 +374,13 @@
     </div>
 
     <div class="card" style="margin-top:14px">
-      <h2>Findings requiring attention <span class="note">severity Medium and above</span></h2>
+      <h2>Findings requiring attention <span class="note" id="findings-note">severity Medium and above</span></h2>
+      <div class="scroll">
       <table class="clickable" id="findings-tbl">
-        <thead><tr><th>Time <span id="tzlabel2" style="text-transform:none;letter-spacing:0"></span></th><th>Source</th><th>Finding</th><th>Severity</th></tr></thead>
+        <thead><tr><th>Time <span id="tzlabel2" style="text-transform:none;letter-spacing:0"></span></th><th>Source</th><th>Finding</th><th>Severity</th><th>Actions</th></tr></thead>
         <tbody id="findings"></tbody>
       </table>
+      </div>
     </div>
   </section>
 
@@ -290,7 +395,15 @@
         <option value="partial">Partial</option>
         <option value="quarantined">Quarantined</option>
       </select>
-      <button class="ghost" id="ev-reload">Refresh</button>
+      <span style="color:var(--muted);font-size:12px">From (IST):</span>
+      <input type="datetime-local" id="ev-from" title="From date and time (IST)" style="font-size:12px;padding:5px 8px">
+      <span style="color:var(--muted);font-size:12px">To (IST):</span>
+      <input type="datetime-local" id="ev-to" title="To date and time (IST)" style="font-size:12px;padding:5px 8px">
+      <button class="ghost" id="ev-reload">Filter / Refresh</button>
+      <button class="ghost" id="ev-clear-time">Clear Range</button>
+      <span style="color:var(--muted);font-size:12px">Logs to Export:</span>
+      <input type="number" id="ev-export-count" placeholder="e.g. 500" min="1" style="width:85px;font-size:12px;padding:5px 8px">
+      <button class="act" id="ev-export-pdf" style="padding:5px 12px;font-size:12px">📄 Export Logs (PDF)</button>
       <label class="follow" id="followbox">
         <input type="checkbox" id="follow" checked>
         <span class="dot"></span>
@@ -304,7 +417,7 @@
         <h2>Events</h2>
         <div class="scroll">
           <table class="clickable">
-            <thead><tr><th>Received <span id="tzlabel" style="text-transform:none;letter-spacing:0"></span></th><th>Source</th><th>Summary</th><th>Class</th><th>Outcome</th></tr></thead>
+            <thead><tr><th id="ev-sort-th" style="cursor:pointer;user-select:none" title="Click to sort by date/time">Received <span id="ev-sort-arrow">&#9660;</span> <span id="tzlabel" style="text-transform:none;letter-spacing:0"></span></th><th>Source</th><th>Summary</th><th>Class</th><th>Outcome</th></tr></thead>
             <tbody id="ev-rows"></tbody>
           </table>
         </div>
@@ -323,7 +436,7 @@
     <div class="card">
       <h2>Onboarded sources <span class="note">YAML mappings, hot-reloaded from sources/</span></h2>
       <table>
-        <thead><tr><th>Source</th><th>Format</th><th>OCSF classes</th><th>Rules</th><th>Ver</th><th>Approved by</th><th>Content hash</th></tr></thead>
+        <thead><tr><th>Source</th><th>Origin</th><th>Format</th><th>OCSF classes</th><th>Rules</th><th>Ver</th><th>Approved by</th><th>Content hash</th></tr></thead>
         <tbody id="src-rows"></tbody>
       </table>
     </div>
@@ -394,6 +507,66 @@
       </div>
     </div>
   </section>
+
+  <!-- REPORT & EVIDENCE -->
+  <section class="view" id="v-report">
+    <div class="tiles" id="rep-tiles"></div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Generate Section 63 BSA 2023 Forensic Evidence Report <span class="note">Electronic Evidence Certificate</span></h2>
+      <div class="pad">
+        <p style="color:var(--ink-2);font-size:13px;margin-top:0">
+          Prepare an official, cryptographically verified electronic evidence report under <b>Section 63 of the Bharatiya Sakshya Adhiniyam, 2023 (BSA 2023)</b>. The report bundles computer system particulars, physical storage file metadata, Merkle chain head integrity, ingestion breakdowns, findings, and an official Custodian Sign-off block.
+        </p>
+        <div class="bar" style="margin-top:14px">
+          <span class="lbl" style="margin:0">Audit Window (IST):</span>
+          <span style="color:var(--muted);font-size:12px">From</span>
+          <input type="datetime-local" id="rep-from" title="From date and time (IST)" style="font-size:12px;padding:6px 9px">
+          <span style="color:var(--muted);font-size:12px">To</span>
+          <input type="datetime-local" id="rep-to" title="To date and time (IST)" style="font-size:12px;padding:6px 9px">
+          <button class="act" id="rep-gen" style="padding:7px 16px;font-size:12.5px">📄 Generate Forensic Report (Print / PDF)</button>
+          <button class="ghost" id="rep-all" style="padding:7px 12px;font-size:12px">All Time</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Line-by-Line Log Data PDF Export <span class="note">Detailed Event Table</span></h2>
+      <div class="pad">
+        <p style="color:var(--ink-2);font-size:13px;margin-top:0">
+          Export as many raw and normalized log events as needed into a clean, printable PDF table. Filter by date and time, source, and enter any log count manually below (if requested count exceeds available records, all available logs are returned with a notice).
+        </p>
+        <div class="bar" style="margin-top:14px">
+          <span class="lbl" style="margin:0">Number of Logs:</span>
+          <input type="number" id="rep-log-count" placeholder="e.g. 500" min="1" style="width:110px;font-size:13px;padding:6px 9px">
+          <span style="color:var(--muted);font-size:12px">From (IST):</span>
+          <input type="datetime-local" id="rep-log-from" title="From date and time (IST)" style="font-size:12px;padding:6px 9px">
+          <span style="color:var(--muted);font-size:12px">To (IST):</span>
+          <input type="datetime-local" id="rep-log-to" title="To date and time (IST)" style="font-size:12px;padding:6px 9px">
+          <span style="color:var(--muted);font-size:12px">Source:</span>
+          <select id="rep-log-source" style="font-size:13px;padding:6px 9px"><option value="">All Sources</option></select>
+          <button class="act" id="rep-log-export" style="padding:7px 16px;font-size:12.5px">📄 Export Log Data Table (PDF)</button>
+          <button class="ghost" id="rep-log-clear" style="padding:7px 12px;font-size:12px">Clear Time</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:14px">
+      <div class="card">
+        <h2>Physical Storage Evidence</h2>
+        <div class="pad" id="rep-storage">
+          <div class="empty">Loading storage statistics…</div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Legal & Forensic Compliance</h2>
+        <div class="pad" style="color:var(--ink-2);font-size:13px;line-height:1.6">
+          <p style="margin-top:0"><b style="color:var(--ink)">Section 63 BSA 2023 Admissibility:</b> Replaces former Section 65B of Indian Evidence Act. Software cannot self-certify; AUFLA deterministically compiles immutable SHA-256 evidence, Merkle roots, and receipt clock timelines, leaving an official declaration block for the responsible forensic custodian.</p>
+          <p style="margin-bottom:0"><b style="color:var(--good)">Tamper-Proof Verification:</b> The generated certificate re-validates the Ed25519-signed Merkle chain to certify zero divergence in the canonical raw store.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 </div>
 
@@ -411,19 +584,39 @@ const post = async p => (await fetch(p, {method:"POST"})).json();
    what is on screen can always be reconciled with what is in evidence. */
 
 const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "local";
+const tzDisplay = (TZ.includes("Calcutta") || TZ.includes("Kolkata") || TZ.toUpperCase() === "IST") ? "IST" : TZ;
 
 // received_at carries nanosecond precision; Date.parse wants at most three
 // fractional digits, so trim rather than rely on engine tolerance.
-const parseTs = iso => new Date(String(iso).replace(/\.(\d{3})\d*(Z|[+-]\d{2}:?\d{2})?$/, ".$1Z"));
+const parseTs = iso => {
+  if (!iso) return new Date(NaN);
+  let s = String(iso).trim();
+  if (s.endsWith("Z")) {
+    s = s.replace(/\.(\d{3})\d*Z$/, ".$1Z");
+  } else if (!s.includes("+") && !s.slice(10).includes("-")) {
+    s = s.replace(/\.(\d{3})\d*$/, ".$1") + "Z";
+  }
+  return new Date(s);
+};
+
+const pad2 = n => String(n).padStart(2, "0");
+
+const fmtEventTime = iso => {
+  const d = parseTs(iso);
+  if (isNaN(d.getTime())) return String(iso).slice(0, 19);
+  return `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
+};
 
 const fmtTime = iso => {
   const d = parseTs(iso);
-  return isNaN(d) ? String(iso).slice(11, 19)
-    : d.toLocaleTimeString([], {hour12:false, hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  return isNaN(d.getTime()) ? String(iso).slice(11, 19)
+    : `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 };
+
 const fmtDateTime = iso => {
   const d = parseTs(iso);
-  return isNaN(d) ? String(iso) : d.toLocaleString([], {hour12:false});
+  if (isNaN(d.getTime())) return String(iso);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 };
 const SERIES = ["--s1","--s2","--s3","--s4","--s5","--s6","--s7","--s8"];
 // Past the last validated slot, fold into a neutral "Other" band rather than
@@ -442,11 +635,31 @@ function svg(w, h, body, extra="") {
 }
 
 // Stacked area over time. One band per source, colours in fixed slot order.
+// Catmull-Rom -> cubic Bezier, so the stacked bands read as a smooth curve
+// instead of sharp straight-line segments -- the single biggest thing that
+// makes a time series look hand-drawn versus considered.
+function smoothPath(points) {
+  if (points.length < 3) return "M" + points.map(p => p.join(",")).join("L");
+  let d = `M${points[0][0]},${points[0][1]}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || p2;
+    const c1x = p1[0] + (p2[0] - p0[0]) / 6;
+    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    const c2x = p2[0] - (p3[0] - p1[0]) / 6;
+    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    d += `C${c1x},${c1y} ${c2x},${c2y} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
+
 function timelineChart(el, tl) {
   const pts = tl.points, srcs = tl.sources;
   if (!pts.length) { el.innerHTML = `<div class="empty">No events yet.</div>`; return; }
 
-  const W = 900, H = 230, P = {t:14, r:14, b:26, l:44};
+  const W = 900, H = 240, P = {t:16, r:14, b:26, l:44};
   const iw = W - P.l - P.r, ih = H - P.t - P.b;
   const max = Math.max(1, ...pts.map(p => p.total));
   const x = i => P.l + (pts.length === 1 ? iw/2 : (i / (pts.length - 1)) * iw);
@@ -461,8 +674,12 @@ function timelineChart(el, tl) {
     g += `<text x="${P.l-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="${cssv("--muted")}">${v}</text>`;
   }
 
-  // stacked bands, drawn top-down so each sits on the running total
-  let running = pts.map(() => 0), bands = "";
+  // stacked bands, drawn top-down so each sits on the running total. Top and
+  // bottom edges are each smoothed independently, then joined into one
+  // closed region -- smoothing the already-closed polygon would round off
+  // the vertical seams between buckets, which is not what a smooth *curve*
+  // should do.
+  let running = pts.map(() => 0), bands = "", defs = "";
   srcs.forEach((s, si) => {
     const color = slot(si);
     const top = [], bottom = [];
@@ -472,28 +689,135 @@ function timelineChart(el, tl) {
       top.push([x(i), y(base + v)]);
       running[i] = base + v;
     });
-    const path = "M" + top.map(p => p.join(",")).join("L")
-               + "L" + bottom.reverse().map(p => p.join(",")).join("L") + "Z";
-    // 2px surface gap between stacked segments
-    bands += `<path d="${path}" fill="${color}" fill-opacity="0.82"
-                stroke="${cssv("--surface")}" stroke-width="2" stroke-linejoin="round"/>`;
+    const topPath = smoothPath(top);
+    const bottomPath = smoothPath(bottom.slice().reverse());
+    const path = `${topPath} L${bottom[bottom.length-1][0]},${bottom[bottom.length-1][1]} `
+               + bottomPath.replace(/^M/, "L") + " Z";
+
+    // Each band fades from a solid top edge toward the surface colour at its
+    // own bottom, using its local bounding box -- gives the stack a sense of
+    // depth rather than a flat wash of colour.
+    defs += `<linearGradient id="tl-g${si}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity="0.88"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0.32"/>
+    </linearGradient>`;
+
+    // 2px surface gap between stacked segments; the top edge also gets a
+    // slightly heavier stroke in the series' own colour so each layer reads
+    // as a distinct ribbon rather than bleeding into its neighbour.
+    bands += `<path d="${path}" fill="url(#tl-g${si})"
+                stroke="${cssv("--surface")}" stroke-width="2" stroke-linejoin="round"/>
+              <path d="${topPath}" fill="none" stroke="${color}" stroke-width="1.75"
+                stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>`;
   });
 
-  // x labels: first and last only, so nothing collides
+  // x labels: five evenly spaced ticks (fewer when there are fewer buckets),
+  // rather than only the first and last -- the axis previously gave no sense
+  // of the scale in between.
   const fmt = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
-  const xl = `<text x="${P.l}" y="${H-8}" font-size="10" fill="${cssv("--muted")}">${fmt(pts[0].t)}</text>
-              <text x="${W-P.r}" y="${H-8}" text-anchor="end" font-size="10" fill="${cssv("--muted")}">${fmt(pts[pts.length-1].t)}</text>`;
+  const tickCount = Math.min(5, pts.length);
+  let xl = "";
+  for (let i = 0; i < tickCount; i++) {
+    const idx = tickCount === 1 ? 0 : Math.round(i * (pts.length - 1) / (tickCount - 1));
+    const anchor = idx === 0 ? "start" : idx === pts.length - 1 ? "end" : "middle";
+    xl += `<text x="${x(idx)}" y="${H-8}" text-anchor="${anchor}" font-size="10" fill="${cssv("--muted")}">${fmt(pts[idx].t)}</text>`;
+  }
 
-  // hover layer: one invisible column per bucket
-  let hot = "";
-  pts.forEach((p, i) => {
-    const bw = iw / Math.max(pts.length, 1);
-    const parts = srcs.filter(s => p[s]).map(s => `${s}: ${p[s]}`).join(" · ");
-    hot += `<rect x="${x(i)-bw/2}" y="${P.t}" width="${bw}" height="${ih}" fill="transparent">
-              <title>${esc(fmt(p.t))}\n${esc(parts || "no events")}\ntotal: ${p.total}</title></rect>`;
+  // Crosshair + per-series dot markers, hidden until hover; JS below moves
+  // and reveals them rather than re-rendering the whole chart per pixel.
+  let dots = "";
+  srcs.forEach((_, si) => {
+    dots += `<circle id="tl-dot-${si}" r="3.5" fill="${slot(si)}" stroke="${cssv("--surface")}" stroke-width="1.5" hidden/>`;
   });
+  const crosshair = `<line id="tl-cross" x1="0" x2="0" y1="${P.t}" y2="${P.t+ih}"
+      stroke="${cssv("--axis")}" stroke-width="1" stroke-dasharray="2,3" hidden/>`;
 
-  el.innerHTML = svg(W, H, g + bands + xl + hot, `style="display:block"`);
+  // One invisible full-height rect drives hover; cheaper and smoother than a
+  // rect per bucket, and lets the crosshair snap continuously to the nearest
+  // point rather than jumping between fixed hit zones.
+  const hot = `<rect id="tl-hitzone" x="${P.l}" y="${P.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
+
+  el.innerHTML = svg(
+    W, H,
+    `<defs>${defs}</defs>${g}${bands}${xl}${crosshair}${dots}${hot}`,
+    `style="display:block"`
+  ) + `<div id="tl-tooltip" class="tl-tooltip" hidden></div>`;
+
+  const svgEl = el.querySelector("svg");
+  const hitzone = el.querySelector("#tl-hitzone");
+  const crossEl = el.querySelector("#tl-cross");
+  const tooltip = el.querySelector("#tl-tooltip");
+  const dotEls = srcs.map((_, si) => el.querySelector(`#tl-dot-${si}`));
+
+  function showAt(i) {
+    const p = pts[i];
+    const px = x(i);
+    crossEl.setAttribute("x1", px);
+    crossEl.setAttribute("x2", px);
+    crossEl.hidden = false;
+
+    let ry = 0;
+    srcs.forEach((s, si) => {
+      ry += p[s] || 0;
+      const dot = dotEls[si];
+      if (!p[s]) { dot.hidden = true; return; }
+      dot.hidden = false;
+      dot.setAttribute("cx", px);
+      dot.setAttribute("cy", y(ry));
+    });
+
+    const rows = srcs.filter(s => p[s]).map((s, k) =>
+      `<div class="tt-row"><span class="tt-dot" style="background:${slot(srcs.indexOf(s))}"></span>${esc(s)}: <b>${p[s]}</b></div>`
+    ).join("");
+    tooltip.innerHTML = `<div class="tt-time">${esc(fmt(p.t))}</div>${rows}
+      <div class="tt-total">total: ${p.total}</div>`;
+
+    // Position in the wrapper's own coordinate space (SVG is viewBox-scaled,
+    // so the CSS pixel position has to be derived from the rendered size,
+    // not the SVG's internal 900x240 units).
+    const scaleX = svgEl.clientWidth / W, scaleY = svgEl.clientHeight / H;
+    const anchorX = px * scaleX, anchorY = y(p.total) * scaleY;
+
+    tooltip.style.left = `${anchorX}px`;
+    tooltip.style.top = `${anchorY}px`;
+    tooltip.style.transform = "translate(-50%,-100%)";  // default: sit above the point
+    tooltip.hidden = false;
+
+    // The default anchoring flips the tooltip above the hovered point. For a
+    // tall peak that point can be near the very top of the chart, and the
+    // card has no overflow clipping -- an un-clamped tooltip would render
+    // outside the card entirely, over whatever sits above it. Measured after
+    // content is set (so its real height is known), and flipped to sit below
+    // the point instead when there isn't room above.
+    requestAnimationFrame(() => {
+      const box = tooltip.getBoundingClientRect(), wrap = el.getBoundingClientRect();
+      if (box.top < wrap.top) {
+        tooltip.style.transform = "translate(-50%,10px)";
+      }
+      const box2 = tooltip.getBoundingClientRect();
+      if (box2.right > wrap.right) tooltip.style.left = `${anchorX - (box2.right - wrap.right) - 6}px`;
+      if (box2.left < wrap.left) tooltip.style.left = `${anchorX + (wrap.left - box2.left) + 6}px`;
+    });
+  }
+
+  function hide() {
+    crossEl.hidden = true;
+    dotEls.forEach(d => d.hidden = true);
+    tooltip.hidden = true;
+  }
+
+  hitzone.addEventListener("mousemove", (ev) => {
+    const rect = svgEl.getBoundingClientRect();
+    const localX = (ev.clientX - rect.left) * (W / rect.width);
+    let nearest = 0, best = Infinity;
+    pts.forEach((_, i) => {
+      const d = Math.abs(x(i) - localX);
+      if (d < best) { best = d; nearest = i; }
+    });
+    showAt(nearest);
+  });
+  hitzone.addEventListener("mouseleave", hide);
+
   $("#tl-legend").innerHTML = srcs.map((s, i) =>
     `<span><i style="background:${slot(i)}"></i>${esc(s)}</span>`).join("");
   $("#tl-note").textContent = `${(tl.bucket_ms/1000).toFixed(0)}s buckets`;
@@ -523,21 +847,50 @@ function barList(el, rows, opt = {}) {
 // Default to the last hour: a console is read for what is happening now, and
 // an all-time axis buries hours of detail under whatever spiked most recently.
 let range = "1h";
+let customFrom = null, customTo = null;
 const RANGE_LABELS = {"15m":"15 min","1h":"1 hour","6h":"6 hours","24h":"24 hours","7d":"7 days","all":"All"};
 
 async function loadOverview() {
+  const qs = new URLSearchParams();
+  if (customFrom) qs.set("from", customFrom);
+  if (customTo) qs.set("to", customTo);
+  if (!customFrom && !customTo) qs.set("range", range);
+
   const [s, o] = await Promise.all([
     get("/api/stats"),
-    get("/api/overview?range=" + encodeURIComponent(range)),
+    get("/api/overview?" + qs.toString()),
   ]);
 
   $("#ranges").innerHTML = (o.ranges || ["1h","all"]).map(r =>
-    `<button data-r="${r}" class="${r===o.range?"on":""}">${RANGE_LABELS[r]||r}</button>`).join("");
+    `<button data-r="${r}" class="${(!customFrom && !customTo && r===o.range)?"on":""}">${RANGE_LABELS[r]||r}</button>`).join("");
   document.querySelectorAll("#ranges button").forEach(b =>
-    b.onclick = () => { range = b.dataset.r; loadOverview(); });
+    b.onclick = () => {
+      range = b.dataset.r;
+      customFrom = null; customTo = null;
+      $("#ov-from").value = ""; $("#ov-to").value = "";
+      loadOverview();
+    });
+
+  $("#ov-apply").onclick = () => {
+    customFrom = $("#ov-from").value ? $("#ov-from").value : null;
+    customTo = $("#ov-to").value ? $("#ov-to").value : null;
+    if (customFrom || customTo) {
+      document.querySelectorAll("#ranges button").forEach(b => b.classList.remove("on"));
+      loadOverview();
+    }
+  };
+  $("#ov-clear").onclick = () => {
+    customFrom = null; customTo = null;
+    $("#ov-from").value = ""; $("#ov-to").value = "";
+    range = "1h";
+    loadOverview();
+  };
 
   // The tiles are all-time totals; everything below is window-scoped, so say
   // so rather than letting the two silently disagree.
+  const winLabel = (customFrom || customTo)
+    ? `custom window (${customFrom||"start"} to ${customTo||"now"})`
+    : `in ${(RANGE_LABELS[o.range] || o.range).toLowerCase()}`;
   $("#range-note").textContent =
     `${o.event_count.toLocaleString()} of ${s.raw_events.toLocaleString()} events in this window`;
 
@@ -561,24 +914,93 @@ async function loadOverview() {
 
   ["n-src","n-cls","n-dst","n-out"].forEach(id => {
     const e = document.getElementById(id);
-    if (e) e.textContent = "in " + (RANGE_LABELS[o.range] || o.range).toLowerCase();
+    if (e) e.textContent = winLabel;
   });
 
   barList($("#source-chart"), o.by_source);
   barList($("#class-chart"), o.by_class);
   barList($("#talker-chart"), o.top_talkers, {color:()=> "--s1"});
 
+  $("#findings-note").textContent =
+    `${o.findings.length} finding${o.findings.length===1?"":"s"} · severity Medium and above`;
+
   $("#findings").innerHTML = o.findings.length ? o.findings.map(f => `
     <tr data-uid="${f.event_uid}">
-      <td class="mono">${esc(fmtTime(f.time))}</td>
+      <td class="mono" title="${esc(fmtDateTime(f.time))} (${esc(tzDisplay)})">${esc(fmtEventTime(f.time))}</td>
       <td>${esc(f.source)}</td>
       <td>${esc(f.title)}</td>
       <td><span class="sev" style="background:${cssv(SEV_COLOR[f.severity_name]||"--muted")}22;color:${cssv(SEV_COLOR[f.severity_name]||"--muted")}">${esc(f.severity_name)}</span></td>
+      <td class="finding-actions">
+        <button class="ghost mark-normal-btn" type="button">Mark as normal</button>
+      </td>
     </tr>`).join("")
-    : `<tr><td colspan="4" class="empty">No findings at Medium or above.</td></tr>`;
+    : `<tr><td colspan="5" class="empty">No findings at Medium or above.</td></tr>`;
 
-  document.querySelectorAll("#findings tr[data-uid]").forEach(tr =>
-    tr.onclick = () => { show("events"); loadEvents().then(() => showEvent(tr.dataset.uid)); });
+  document.querySelectorAll("#findings tr[data-uid]").forEach(tr => {
+    tr.querySelectorAll("td:not(.finding-actions)").forEach(td =>
+      td.onclick = () => { show("events"); loadEvents().then(() => showEvent(tr.dataset.uid)); });
+
+    const uid = tr.dataset.uid;
+    const actionCell = tr.querySelector(".finding-actions");
+
+    // Rewired every time the cell's markup is rebuilt (initial render, and
+    // again after Cancel), rather than only once at load -- otherwise a
+    // second "Mark as normal" click after Cancel would silently do nothing.
+    function wireMarkNormalButton() {
+      actionCell.querySelector(".mark-normal-btn").onclick = (ev) => {
+        ev.stopPropagation();
+        // Same audit bar as approving a discovery proposal: this is a
+        // judgement call about a dangerous-looking event, so it must name
+        // who made it, inline and before it is sent.
+        actionCell.innerHTML = `
+          <div class="decide" style="margin:0">
+            <input type="text" class="who" placeholder="Your name or analyst id" autocomplete="off" style="min-width:140px">
+            <button class="act approve" type="button" style="padding:5px 10px">Confirm</button>
+            <button class="ghost" type="button" style="padding:5px 10px">Cancel</button>
+            <span class="lbl decide-msg" style="margin:0"></span>
+          </div>`;
+        const who = actionCell.querySelector(".who");
+        const msg = actionCell.querySelector(".decide-msg");
+        who.onclick = (e) => e.stopPropagation();
+        who.focus();
+
+        actionCell.querySelector(".approve").onclick = async (e2) => {
+          e2.stopPropagation();
+          const by = who.value.trim();
+          if (!by) {
+            msg.innerHTML = `<span style="color:var(--crit)">Enter who is deciding.</span>`;
+            who.focus();
+            return;
+          }
+          actionCell.querySelectorAll("button").forEach(b => b.disabled = true);
+          msg.textContent = "marking normal…";
+          const res = await fetch(`/api/event/${encodeURIComponent(uid)}/triage`, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({by, status: "normal"}),
+          }).then(r => r.json());
+
+          if (res.error) {
+            msg.innerHTML = `<span style="color:var(--crit)">${esc(res.error)}</span>`;
+            actionCell.querySelectorAll("button").forEach(b => b.disabled = false);
+            return;
+          }
+          // The event no longer belongs in a "danger" list; drop the row
+          // rather than wait for the next poll, so the action reads as
+          // immediate.
+          tr.style.opacity = "0";
+          tr.style.transition = "opacity .3s";
+          setTimeout(() => { tr.remove(); loadOverview(); }, 300);
+        };
+        actionCell.querySelector(".ghost").onclick = (e3) => {
+          e3.stopPropagation();
+          actionCell.innerHTML = `<button class="ghost mark-normal-btn" type="button">Mark as normal</button>`;
+          wireMarkNormalButton();
+        };
+      };
+    }
+    wireMarkNormalButton();
+  });
 }
 
 // Uids already on screen. Only genuinely new arrivals get the landing
@@ -587,11 +1009,20 @@ async function loadOverview() {
 let knownUids = new Set();
 let firstEventsLoad = true;
 
+// "desc" = newest first (default, matches the receipt clock the ledger uses).
+// "asc" = oldest first. Sent to the server rather than resorted client-side,
+// because the LIMIT has to be applied from the correct end -- reversing an
+// already-fetched newest-N page would not produce the true oldest N.
+let evSort = "desc";
+
 async function loadEvents() {
   const qs = new URLSearchParams();
   if ($("#q").value) qs.set("q", $("#q").value);
   if ($("#f-source").value) qs.set("source", $("#f-source").value);
   if ($("#f-status").value) qs.set("status", $("#f-status").value);
+  if ($("#ev-from").value) qs.set("from", $("#ev-from").value);
+  if ($("#ev-to").value) qs.set("to", $("#ev-to").value);
+  qs.set("sort", evSort);
   evCache = await get("/api/events?" + qs.toString());
 
   const arrivals = firstEventsLoad
@@ -609,7 +1040,7 @@ async function loadEvents() {
   body.innerHTML = evCache.length ? evCache.map(r => {
     const isNew = arrivals.has(r.event_uid);
     return `<tr data-uid="${r.event_uid}" class="${r.event_uid===selected?"sel ":""}${isNew?"fresh":""}">
-      <td class="mono">${esc(fmtTime(r.received_at))}${isNew?`<span class="newbadge">NEW</span>`:""}</td>
+      <td class="mono" title="${esc(fmtDateTime(r.received_at))} (${esc(tzDisplay)})">${esc(fmtEventTime(r.received_at))}${isNew?`<span class="newbadge">NEW</span>`:""}</td>
       <td>${esc(r.source_id)}</td>
       <td>${esc(r.summary)}</td>
       <td style="color:var(--ink-2);font-size:12px">${esc(r.class_name||"—")}</td>
@@ -646,14 +1077,17 @@ async function showEvent(uid) {
     .map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(typeof v==="object"?JSON.stringify(v):v)}</dd>`).join("");
 
   $("#detail").innerHTML = `
-    <div class="lbl">Original bytes — exactly as received${d.raw.hash_verified?", hash verified":", HASH MISMATCH"}</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+      <div class="lbl" style="margin:0">Original bytes — exactly as received${d.raw.hash_verified?", hash verified":", HASH MISMATCH"}</div>
+      <button class="act" id="btn-print-dossier" style="padding:4px 11px;font-size:11.5px">📄 Print Forensic Dossier (PDF)</button>
+    </div>
     <pre>${esc(d.raw.text)}</pre>
     <div class="lbl">Hex</div><pre>${esc(hex)}</pre>
     <div class="lbl">Lineage</div>
     <dl class="kv">
       <dt>event_uid</dt><dd>${esc(d.raw.event_uid)}</dd>
       <dt>raw_hash</dt><dd>${esc(d.raw.raw_hash)}</dd>
-      <dt>received</dt><dd>${esc(fmtDateTime(d.raw.received_at))} <span style="color:var(--muted)">(${esc(TZ)})</span></dd>
+      <dt>received</dt><dd>${esc(fmtDateTime(d.raw.received_at))} <span style="color:var(--muted)">(${esc(tzDisplay)})</span></dd>
       <dt>received (UTC)</dt><dd>${esc(d.raw.received_at)}</dd>
       ${d.ledger?`<dt>sealed in</dt><dd>batch #${d.ledger.batch_id}, leaf ${d.ledger.leaf_index}${d.ledger.signed?", signed":""}</dd>
       <dt>merkle root</dt><dd>${esc(d.ledger.root)}</dd>`:`<dt>sealed in</dt><dd>not yet sealed</dd>`}
@@ -662,20 +1096,36 @@ async function showEvent(uid) {
     <dl class="kv">${fields}</dl>
     ${d.exports?.cef?`<div class="lbl">Downstream export (CEF — lineage travels with it)</div><pre>${esc(d.exports.cef)}</pre>`:""}
     ${d.warnings.length?`<div class="lbl">Warnings</div>`+d.warnings.map(w=>`<div style="color:var(--warn);font-size:12px;padding:3px 0">• ${esc(w)}</div>`).join(""):""}`;
+
+  const dossierBtn = document.getElementById("btn-print-dossier");
+  if (dossierBtn) {
+    dossierBtn.onclick = () => window.open("/api/event/" + encodeURIComponent(uid) + "/dossier", "_blank");
+  }
 }
 
 async function loadSources() {
   const rows = await get("/api/sources");
-  $("#src-rows").innerHTML = rows.map(m => `
+  // Discovery-approved mappings surface first: they are the ones an analyst
+  // most needs to notice, since they activated after this dashboard was last
+  // checked rather than being part of the original hand-written set.
+  rows.sort((a, b) => (a.author === "discovery" ? -1 : 0) - (b.author === "discovery" ? -1 : 0));
+
+  $("#src-rows").innerHTML = rows.map(m => {
+    const fromDiscovery = m.author === "discovery";
+    return `
     <tr>
       <td><b>${esc(m.source)}</b><div style="color:var(--muted);font-size:11.5px">${esc(m.description)}</div></td>
+      <td>${fromDiscovery
+          ? `<span class="pill" style="background:var(--s1);color:var(--act-ink)">discovery lane</span>`
+          : `<span class="pill" style="background:var(--surface-2);color:var(--ink-2)">hand-written</span>`}</td>
       <td class="mono">${esc(m.format)}</td>
       <td style="font-size:12px">${m.ocsf_classes.map(c=>`${c.uid} ${esc(c.name)}`).join("<br>")}</td>
       <td class="mono">${m.rules.map(esc).join(", ")}</td>
       <td class="num">v${m.version}</td>
       <td>${m.approved_by?`<span class="pill full">${esc(m.approved_by)}</span>`:`<span class="pill quarantined">unapproved</span>`}</td>
       <td class="mono" style="color:var(--muted)">${esc(m.content_hash.slice(0,16))}…</td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
 }
 
 async function loadReview() {
@@ -861,12 +1311,80 @@ $("#livebtn").onclick = async () => {
   setTimeout(refresh, 1200);
 };
 
+/* ---------------- report & storage ---------------- */
+
+async function loadReport() {
+  const [s, q, v] = await Promise.all([
+    get("/api/stats"),
+    get("/api/quarantine"),
+    get("/api/verify")
+  ]);
+
+  $("#rep-tiles").innerHTML = [
+    ["Raw Events", s.raw_events.toLocaleString(), "canonical store (data/raw.db)"],
+    ["Sealed Batches", s.sealed_events.toLocaleString(), `${s.batches} batches in ledger.db`],
+    ["Chain Status", v.ok ? "INTACT" : "DIVERGENT", v.ok ? "all signatures valid" : "tampering detected"],
+    ["OCSF Projected", s.projected.toLocaleString(), "100% derived in ocsf.db"],
+    ["Mappings", String(s.mappings), "approved schemas in sources/"],
+    ["Quarantine", String(s.quarantine.pending), `${s.quarantine.resolved} resolved`],
+  ].map(([k,v,sub]) => `<div class="tile"><div class="k">${k}</div><div class="v">${v}</div><div class="sub">${sub}</div></div>`).join("");
+
+  $("#rep-storage").innerHTML = `
+    <dl class="kv">
+      <dt>Canonical Store</dt><dd class="mono">data/raw.db (${s.raw_events.toLocaleString()} BLOBs, immutable)</dd>
+      <dt>Merkle Ledger</dt><dd class="mono">data/ledger.db (${s.batches} batches, ${s.checkpoints} checkpoints)</dd>
+      <dt>OCSF Projection</dt><dd class="mono">data/ocsf.db (${s.projected.toLocaleString()} normalized records)</dd>
+      <dt>Proposal Store</dt><dd class="mono">data/proposals.db (analyst decision log)</dd>
+      <dt>Chain Head</dt><dd class="mono" style="font-size:11px">${esc(s.chain_head)}</dd>
+    </dl>`;
+
+  const srcSel = $("#rep-log-source");
+  if (srcSel && srcSel.options.length <= 1) {
+    const srcList = await get("/api/sources");
+    srcSel.innerHTML = `<option value="">All Sources</option>` +
+      srcList.map(m => `<option value="${esc(m.source)}">${esc(m.source)}</option>`).join("");
+  }
+}
+
+$("#rep-gen").onclick = () => {
+  const qs = new URLSearchParams();
+  const f = $("#rep-from").value;
+  const t = $("#rep-to").value;
+  if (f) qs.set("from", f);
+  if (t) qs.set("to", t);
+  window.open("/api/report?" + qs.toString(), "_blank");
+};
+
+$("#rep-all").onclick = () => {
+  $("#rep-from").value = "";
+  $("#rep-to").value = "";
+  window.open("/api/report", "_blank");
+};
+
+$("#rep-log-export").onclick = () => {
+  const qs = new URLSearchParams();
+  const count = $("#rep-log-count").value;
+  if (count) qs.set("count", count);
+  const src = $("#rep-log-source").value;
+  if (src) qs.set("source", src);
+  const f = $("#rep-log-from").value || $("#rep-from").value;
+  const t = $("#rep-log-to").value || $("#rep-to").value;
+  if (f) qs.set("from", f);
+  if (t) qs.set("to", t);
+  window.open("/api/logs/report?" + qs.toString(), "_blank");
+};
+
+$("#rep-log-clear").onclick = () => {
+  $("#rep-log-from").value = "";
+  $("#rep-log-to").value = "";
+};
+
 /* ---------------- shell ---------------- */
 
 function show(v) {
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.v===v));
   document.querySelectorAll(".view").forEach(s => s.classList.toggle("on", s.id==="v-"+v));
-  ({overview:loadOverview, events:loadEvents, sources:loadSources, review:loadReview, integrity:loadIntegrity})[v]();
+  ({overview:loadOverview, events:loadEvents, sources:loadSources, review:loadReview, integrity:loadIntegrity, report:loadReport})[v]();
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.v));
 
@@ -880,17 +1398,79 @@ $("#verifybtn").onclick = async () => {
 };
 
 $("#ev-reload").onclick = loadEvents;
+$("#ev-sort-th").onclick = () => {
+  evSort = evSort === "desc" ? "asc" : "desc";
+  $("#ev-sort-arrow").innerHTML = evSort === "desc" ? "&#9660;" : "&#9650;";
+  loadEvents();
+};
+$("#ev-clear-time").onclick = () => {
+  $("#ev-from").value = "";
+  $("#ev-to").value = "";
+  loadEvents();
+};
+$("#ev-export-pdf").onclick = () => {
+  const qs = new URLSearchParams();
+  const count = $("#ev-export-count").value;
+  if (count) qs.set("count", count);
+  if ($("#q").value) qs.set("q", $("#q").value);
+  if ($("#f-source").value) qs.set("source", $("#f-source").value);
+  if ($("#f-status").value) qs.set("status", $("#f-status").value);
+  if ($("#ev-from").value) qs.set("from", $("#ev-from").value);
+  if ($("#ev-to").value) qs.set("to", $("#ev-to").value);
+  window.open("/api/logs/report?" + qs.toString(), "_blank");
+};
 $("#f-source").onchange = loadEvents;
 $("#f-status").onchange = loadEvents;
 let typing; $("#q").oninput = () => { clearTimeout(typing); typing = setTimeout(loadEvents, 250); };
 
 async function refresh() {
-  const active = document.querySelector("nav button.on").dataset.v;
+  const active = document.querySelector("nav button.on")?.dataset.v || "overview";
   if (active === "overview") await loadOverview();
   else if (active === "events") await loadEvents();
+  else if (active === "sources") await loadSources();
+  else if (active === "review") await loadReview();
   else if (active === "integrity") await loadIntegrity();
+  else if (active === "report") await loadReport();
 }
 
+/* ---------------- theme management ---------------- */
+function getPreferredTheme() {
+  const saved = localStorage.getItem("aufla_theme");
+  if (saved === "light" || saved === "dark") return saved;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function updateThemeToggleUi(theme) {
+  const btn = $("#themetoggle");
+  if (!btn) return;
+  const isLight = theme === "light";
+  btn.innerHTML = `<span class="circle">${isLight ? "☀️" : "🌙"}</span>`;
+  btn.setAttribute("title", isLight ? "Switch to Dark Theme" : "Switch to Light Theme");
+}
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  try { localStorage.setItem("aufla_theme", theme); } catch(e) {}
+  updateThemeToggleUi(theme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") || "dark";
+  const next = current === "light" ? "dark" : "light";
+  applyTheme(next);
+  refresh();
+}
+
+$("#themetoggle").onclick = toggleTheme;
+
+if (window.matchMedia) {
+  window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", e => {
+    if (!localStorage.getItem("aufla_theme")) {
+      applyTheme(e.matches ? "light" : "dark");
+      refresh();
+    }
+  });
+}
 
 /* ---------------- streaming ----------------
    Two cadences: the Events table tails at 2s while capture is running and
@@ -910,7 +1490,15 @@ function updateFollowUi() {
 // The page this tab is running. If the file on disk changes underneath an
 // open tab, reload once rather than keep rendering a stale UI -- a tab left
 // open across an edit otherwise shows old behaviour and reads as unfixed.
-let uiVersion = null;
+//
+// The baseline is the version stamped into THIS page when it was served
+// (window.__AUFLA_UI_VERSION__), never the version a later status poll
+// happens to report. A tab that loaded old markup but makes its first poll
+// after a restart would otherwise silently adopt the new version as its own
+// starting point and never detect it is stale -- which is exactly how the
+// findings-table actions and the sort toggle went missing from an
+// already-open tab despite both being live on the server.
+let uiVersion = window.__AUFLA_UI_VERSION__ || null;
 
 async function tick(fast) {
   lastStatus = await get("/api/live/status");
@@ -945,11 +1533,16 @@ setInterval(() => tick(true), 2000);
 setInterval(() => tick(false), 6000);
 $("#follow").onchange = () => { if (updateFollowUi()) loadEvents(); };
 
-["tzlabel","tzlabel2"].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = `(${TZ})`; });
+["tzlabel","tzlabel2"].forEach(id => { const e = document.getElementById(id); if (e) e.textContent = `(${tzDisplay})`; });
 
 (async () => {
+  const currentTheme = document.documentElement.getAttribute("data-theme") || getPreferredTheme();
+  updateThemeToggleUi(currentTheme);
   lastStatus = await get("/api/live/status");
-  uiVersion = lastStatus.ui_version || null;
+  // uiVersion is already set from window.__AUFLA_UI_VERSION__ above; only
+  // fall back to the poll's value if the page was somehow served without
+  // the stamp (e.g. an older cached response).
+  if (uiVersion === null) uiVersion = lastStatus.ui_version || null;
   renderLive(lastStatus);
   updateFollowUi();
   await loadOverview();
