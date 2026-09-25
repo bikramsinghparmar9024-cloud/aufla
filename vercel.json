@@ -5,5 +5,13 @@
       "source": "/(.*)",
       "destination": "/api/index.py"
     }
-  ]
+  ],
+  "functions": {
+    "api/index.py": {
+      "includeFiles": [
+        "aufla/web/index.html",
+        "sources/**"
+      ]
+    }
+  }
 }
