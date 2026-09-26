@@ -191,6 +191,13 @@ def cmd_serve(args) -> int:
     # Open once so the databases and keys exist, then hand the server the data
     # directory: it opens per-request connections on its own threads.
     store, ledger, registry, ocsf = _open(args.data, args.sources)
+    
+    if store.count() == 0:
+        import subprocess
+        print("Empty database detected. Auto-seeding realistic demo data...", file=sys.stderr)
+        subprocess.run([sys.executable, "tools/seed_demo.py", "--events", "3000", "--hours", "6.0"], check=True)
+        print("Demo data seeded successfully.", file=sys.stderr)
+
     store.close()
     ledger.close()
 
