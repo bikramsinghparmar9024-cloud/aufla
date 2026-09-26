@@ -714,7 +714,12 @@ function timelineChart(el, tl) {
   // x labels: five evenly spaced ticks (fewer when there are fewer buckets),
   // rather than only the first and last -- the axis previously gave no sense
   // of the scale in between.
-  const fmt = t => new Date(t).toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  const isMultiDay = pts.length > 0 && (pts[pts.length-1].t - pts[0].t > 24 * 3600 * 1000);
+  const fmt = t => {
+    const d = new Date(t);
+    if (isMultiDay) return d.toLocaleDateString([], {month:"short", day:"numeric"}) + " " + d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+  };
   const tickCount = Math.min(5, pts.length);
   let xl = "";
   for (let i = 0; i < tickCount; i++) {
