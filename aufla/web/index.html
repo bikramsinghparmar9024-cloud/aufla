@@ -640,6 +640,8 @@ function svg(w, h, body, extra="") {
 // makes a time series look hand-drawn versus considered.
 function smoothPath(points) {
   if (points.length < 3) return "M" + points.map(p => p.join(",")).join("L");
+  const maxY = Math.max(...points.map(p => p[1]));
+  const minY = Math.min(...points.map(p => p[1]));
   let d = `M${points[0][0]},${points[0][1]}`;
   for (let i = 0; i < points.length - 1; i++) {
     const p0 = points[i - 1] || points[i];
@@ -647,9 +649,12 @@ function smoothPath(points) {
     const p2 = points[i + 1];
     const p3 = points[i + 2] || p2;
     const c1x = p1[0] + (p2[0] - p0[0]) / 6;
-    const c1y = p1[1] + (p2[1] - p0[1]) / 6;
+    let c1y = p1[1] + (p2[1] - p0[1]) / 6;
     const c2x = p2[0] - (p3[0] - p1[0]) / 6;
-    const c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    let c2y = p2[1] - (p3[1] - p1[1]) / 6;
+    // strictly clamp the control points to prevent overshoot (dipping below the axis)
+    c1y = Math.max(minY, Math.min(maxY, c1y));
+    c2y = Math.max(minY, Math.min(maxY, c2y));
     d += `C${c1x},${c1y} ${c2x},${c2y} ${p2[0]},${p2[1]}`;
   }
   return d;
