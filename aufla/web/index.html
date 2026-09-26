@@ -661,7 +661,7 @@ function timelineChart(el, tl) {
 
   const W = 900, H = 240, P = {t:16, r:14, b:26, l:44};
   const iw = W - P.l - P.r, ih = H - P.t - P.b;
-  const max = Math.max(1, ...pts.map(p => p.total));
+  const max = Math.max(1, ...pts.map(p => Math.max(...srcs.map(s => p[s] || 0))));
   const x = i => P.l + (pts.length === 1 ? iw/2 : (i / (pts.length - 1)) * iw);
   const y = v => P.t + ih - (v / max) * ih;
 
@@ -674,25 +674,20 @@ function timelineChart(el, tl) {
     g += `<text x="${P.l-8}" y="${yy+4}" text-anchor="end" font-size="10" fill="${cssv("--muted")}">${v}</text>`;
   }
 
-  // stacked bands, drawn top-down so each sits on the running total. Top and
-  // bottom edges are each smoothed independently, then joined into one
-  // closed region -- smoothing the already-closed polygon would round off
-  // the vertical seams between buckets, which is not what a smooth *curve*
-  // should do.
-  let running = pts.map(() => 0), bands = "", defs = "";
+  // Layered (un-stacked) bands. Stacking bezier curves with highly variable data
+  // causes the top and bottom splines to cross over each other and create ugly artifacts.
+  // Drawing them independently from the base axis creates a beautiful layered look.
+  let defs = "", bands = "";
   srcs.forEach((s, si) => {
     const color = slot(si);
     const top = [], bottom = [];
     pts.forEach((p, i) => {
-      const base = running[i], v = p[s] || 0;
-      bottom.push([x(i), y(base)]);
-      top.push([x(i), y(base + v)]);
-      running[i] = base + v;
+      const v = p[s] || 0;
+      bottom.push([x(i), y(0)]);
+      top.push([x(i), y(v)]);
     });
     const topPath = smoothPath(top);
-    const bottomPath = smoothPath(bottom.slice().reverse());
-    const path = `${topPath} L${bottom[bottom.length-1][0]},${bottom[bottom.length-1][1]} `
-               + bottomPath.replace(/^M/, "L") + " Z";
+    const path = `${topPath} L${bottom[bottom.length-1][0]},${bottom[bottom.length-1][1]} L${bottom[0][0]},${bottom[0][1]} Z`;
 
     // Each band fades from a solid top edge toward the surface colour at its
     // own bottom, using its local bounding box -- gives the stack a sense of
