@@ -717,7 +717,7 @@ function timelineChart(el, tl) {
   const isMultiDay = pts.length > 0 && (pts[pts.length-1].t - pts[0].t > 24 * 3600 * 1000);
   const fmt = t => {
     const d = new Date(t);
-    if (isMultiDay) return d.toLocaleDateString([], {month:"short", day:"numeric"}) + " " + d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+    if (isMultiDay) return d.toLocaleDateString([], {month:"short", day:"numeric", year:"numeric"});
     return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit", second:"2-digit"});
   };
   const tickCount = Math.min(5, pts.length);
