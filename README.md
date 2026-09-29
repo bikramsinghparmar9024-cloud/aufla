@@ -37,6 +37,34 @@ python -m aufla.cli ingest samples/pfsense.log --source pfsense_filterlog
 python -m aufla.cli verify
 ```
 
+## Deployment & Setup
+
+### 1. Local Dashboard (Recommended)
+To run the AUFLA dashboard locally and stream your machine's real-time logs:
+```bash
+pip install -r requirements.txt
+python -m aufla.cli serve --port 8000
+```
+Then open `http://127.0.0.1:8000` in your browser. You can click **Start Live Capture** in the UI to ingest your local logs.
+
+### 2. Cloud Deployment (Render for Demos)
+AUFLA is fully compatible with free cloud platforms like Render. The system will automatically generate 7 days of mathematically balanced dummy data if deployed to an empty cloud container!
+1. Go to **Render.com** and create a **New Web Service**.
+2. Connect your GitHub repository.
+3. Use the following configuration:
+   - **Environment:** Python 3
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `python -m aufla.cli serve --host 0.0.0.0 --port $PORT`
+4. Click **Create Web Service**. Your live demo dashboard will be available in 2 minutes!
+
+### 3. Docker Deployment
+If you want to package AUFLA for production in any enterprise cloud environment:
+```bash
+docker build -t aufla -f docker/Dockerfile .
+docker run -p 8000:8000 aufla
+```
+*(Note: Because Docker containers are ephemeral, you must mount a Persistent Volume to the `data/` directory to prevent your cryptographic ledgers from being wiped on restart).*
+
 ## The tamper demo
 
 ```bash
