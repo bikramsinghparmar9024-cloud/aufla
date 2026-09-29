@@ -851,7 +851,7 @@ function barList(el, rows, opt = {}) {
 
 // Default to the last hour: a console is read for what is happening now, and
 // an all-time axis buries hours of detail under whatever spiked most recently.
-let range = "1h";
+let range = "all";
 let customFrom = null, customTo = null;
 const RANGE_LABELS = {"15m":"15 min","1h":"1 hour","6h":"6 hours","24h":"24 hours","7d":"7 days","all":"All"};
 
@@ -887,7 +887,7 @@ async function loadOverview() {
   $("#ov-clear").onclick = () => {
     customFrom = null; customTo = null;
     $("#ov-from").value = ""; $("#ov-to").value = "";
-    range = "1h";
+    range = "all";
     loadOverview();
   };
 
