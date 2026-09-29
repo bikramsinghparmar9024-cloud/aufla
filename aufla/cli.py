@@ -195,7 +195,7 @@ def cmd_serve(args) -> int:
     if store.count() == 0:
         import subprocess
         print("Empty database detected. Auto-seeding realistic demo data...", file=sys.stderr)
-        subprocess.run([sys.executable, "tools/seed_demo.py", "--events", "3000", "--hours", "6.0"], check=True)
+        subprocess.run([sys.executable, "tools/seed_demo.py", "--events", "3000", "--hours", "168.0"], check=True)
         print("Demo data seeded successfully.", file=sys.stderr)
 
     store.close()
